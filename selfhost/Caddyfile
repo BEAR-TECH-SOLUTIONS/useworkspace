@@ -1,0 +1,56 @@
+# Self-hosted usework.space reverse proxy.
+#
+# Caddy handles TLS termination via Let's Encrypt automatically — no
+# manual cert plumbing. WebSocket upgrades pass through transparently
+# so Reverb's pusher-protocol stream lands on the same domain.
+#
+# Edit TC_DOMAIN in .env to change the served hostname; Caddy will
+# request a new cert on the next reload.
+
+{$TC_DOMAIN} {
+    encode zstd gzip
+
+    # Pinned security headers (audit L12). Caddy's defaults emit a
+    # subset; pin explicitly so the deployment doesn't silently
+    # regress if defaults change between releases. The app also sets
+    # these via SecurityHeaders middleware — duplicate emission is
+    # idempotent (last-write-wins inside the response) and gives us
+    # both edge + app coverage.
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options    "nosniff"
+        X-Frame-Options           "DENY"
+        Referrer-Policy           "strict-origin-when-cross-origin"
+        Permissions-Policy        "camera=(), microphone=(), geolocation=(), payment=()"
+        # Don't leak Caddy / app server identity.
+        -Server
+    }
+
+    # WebSocket (Reverb / board real-time). MUST come before
+    # php_fastcgi so the /app paths aren't caught by Laravel's
+    # catch-all index.php rewrite.
+    @ws path /app /app/* /apps/* /broadcasting/auth
+    reverse_proxy @ws reverb:8080
+
+    # Laravel front-controller pattern. Caddy's high-level
+    # `php_fastcgi` directive handles the try_files dance (existing
+    # file → that file, otherwise → index.php) and sets up FastCGI
+    # env (SCRIPT_FILENAME, etc.) automatically. The lower-level
+    # `reverse_proxy + transport fastcgi` form has NO `index`
+    # subdirective and doesn't rewrite clean URLs at all — that's
+    # what was breaking before.
+    #
+    # /var/www/public is shared with the app service via the
+    # `app_public` named volume (see compose.yml). Caddy needs to
+    # stat files for try_files AND serve static assets directly;
+    # both require the directory to be visible inside this
+    # container.
+    root * /var/www/public
+    php_fastcgi app:9000
+    file_server
+
+    log {
+        output stdout
+        format console
+    }
+}

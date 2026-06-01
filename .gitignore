@@ -1,0 +1,74 @@
+*.log
+.DS_Store
+.env
+.env.backup
+.env.production
+.env.local
+.phpactor.json
+.phpunit.result.cache
+/.fleet
+/.idea
+/.nova
+/.phpunit.cache
+/.vscode
+/.zed
+/auth.json
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/vendor
+_ide_helper.php
+Homestead.json
+Homestead.yaml
+Thumbs.db
+
+# Project exclude paths
+/storage/app/
+/storage/framework/rr
+.rr.yaml
+INITIAL.TXT
+rr
+
+# AI tool per-developer state. The skill content under
+# .claude/skills and .junie/skills is intentionally tracked so the
+# team shares one Laravel best-practices guide — only the local
+# settings + runtime lock files are excluded here.
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+.junie/settings.local.json
+.cursor/
+.cline/
+.codeium/
+
+# Editor swap / backup files
+*.swp
+*.swo
+*~
+*.bak
+
+# PHP tool caches
+.php-cs-fixer.cache
+/.phpstan/
+/.rector/
+/.php_cs.cache
+
+# Test coverage output
+/coverage
+/coverage.xml
+clover.xml
+junit.xml
+
+# Vite manifests are built by the deploy pipeline; never committed.
+/public/build/
+/public/hot
+
+# Local self-hosted dev — operator-generated .env from install.sh.
+/selfhost/.env
+/selfhost/.env.bak
+
+# Local Docker overrides (developer-only)
+docker-compose.override.yml
+docker-compose.override.yaml

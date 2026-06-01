@@ -1,0 +1,115 @@
+# Self-hosted Docker build context filter.
+#
+# The Dockerfile (selfhost/Dockerfile) uses an explicit per-directory
+# COPY allow-list as the primary defense against shipping cloud bits.
+# This .dockerignore is a second seam: it (a) makes `docker build`
+# faster by shrinking the tar uploaded to the daemon, and (b) catches
+# a future careless `COPY .` from ever smuggling cloud-only paths
+# into a self-hosted image.
+
+# ─── CRITICAL: cloud-only code must never reach a self-hosted build ──
+app/Modules/Cloud
+database/migrations-cloud
+routes/cloud.php
+
+# ─── Git metadata ────────────────────────────────────────────────────
+.git
+.gitignore
+.gitattributes
+.gitkeep
+.gitlab-ci.yml
+.github
+
+# ─── Dependencies rebuilt in the vendor stage ────────────────────────
+vendor
+node_modules
+
+# ─── Env files: secrets come from the runtime env, never baked ───────
+.env
+.env.*
+!.env.example
+
+# ─── Tests + tooling (never ship to production runtime) ──────────────
+tests
+phpunit.xml
+phpunit.result.cache
+.phpunit.cache
+.phpunit.result.cache
+.php-cs-fixer.cache
+.phpstan
+.rector
+coverage
+coverage.xml
+clover.xml
+junit.xml
+
+# ─── Editor / IDE state ──────────────────────────────────────────────
+.idea
+.vscode
+.zed
+.fleet
+.nova
+.phpactor.json
+*.swp
+*.swo
+*~
+*.bak
+*.orig
+
+# ─── AI tool state (per-developer) ───────────────────────────────────
+.ai
+.claude
+.junie
+.cursor
+.cline
+.codeium
+.mcp.json
+boost.json
+AGENTS.md
+CLAUDE.md
+
+# ─── OS clutter ──────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ─── Cloud deploy machinery — not for the self-hosted image ──────────
+deploy.php
+deployment
+
+# ─── Operator wrapper lives at /usr/local/bin on customer hosts ──────
+bin
+
+# ─── Selfhost distribution artefacts ─────────────────────────────────
+# Operators download install.sh / compose.yml / Caddyfile from the
+# public bootstrap host; the IMAGE only needs the entrypoint. The
+# Dockerfile itself is read before .dockerignore is applied (Docker
+# treats it specially) so excluding it here is safe — listed anyway
+# for clarity. The negation lines whitelist what IS needed.
+selfhost/*
+!selfhost/entrypoint.sh
+!selfhost/Dockerfile
+
+# ─── Build pipeline assets — Vite runs in CI BEFORE docker build, ─────
+#     its manifest + assets land in public/build/ and are copied in.
+package.json
+package-lock.json
+vite.config.js
+
+# ─── Internal docs / scratch ─────────────────────────────────────────
+README.md
+docs
+openapi.yaml
+backend-encryption-cleanup.md
+wsschema.md
+INITIAL.TXT
+
+# ─── Runtime storage state — Laravel writes here at runtime; ─────────
+#     dev cruft (logs, sessions, cached views) must not bake into the
+#     image. Keep the directory skeletons so chmod targets exist.
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/app/*
+storage/pail
+!storage/**/.gitkeep

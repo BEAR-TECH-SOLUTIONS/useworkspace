@@ -1,0 +1,861 @@
+[
+  {
+    "id": "w-1",
+    "type": "heading",
+    "props": { "level": 1, "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Welcome to TeamCore \ud83d\ude80", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-2",
+    "type": "paragraph",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "TeamCore is your all-in-one workspace for managing projects, storing credentials securely, tracking expenses, and documenting everything \u2014 all with end-to-end encryption where it matters. This guide walks you through every feature so your team can hit the ground running.", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-10",
+    "type": "heading",
+    "props": { "level": 2, "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "\ud83d\udccb Task Boards", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-11",
+    "type": "paragraph",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Task boards are the core of project management in TeamCore. Each project can have multiple boards, and each board supports three views.", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-12",
+    "type": "heading",
+    "props": { "level": 3, "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Kanban view", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-13",
+    "type": "paragraph",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Drag-and-drop cards between columns to track work through stages. Each column represents a status (e.g. To Do, In Progress, Done). You can:", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-14",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Create custom columns with colors and WIP (work-in-progress) limits", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-15",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Drag cards between columns or reorder within a column", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-16",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Drag columns to reorder the board layout", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-17",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Right-click a column to rename, sort, or delete it", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-18",
+    "type": "heading",
+    "props": { "level": 3, "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "List view", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-19",
+    "type": "paragraph",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "A compact, vertically-stacked view of all tasks grouped by column. Useful for scanning a large board quickly. Right-click any task for actions (edit, move, archive, delete).", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-20",
+    "type": "heading",
+    "props": { "level": 3, "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Calendar view", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-21",
+    "type": "paragraph",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "See tasks plotted on a calendar by their due date. Great for deadline-heavy projects. Click a date to create a task due that day.", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-22",
+    "type": "heading",
+    "props": { "level": 3, "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Task features", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-23",
+    "type": "paragraph",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Every task supports:", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-24",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Priority", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Low, Medium, High, or Urgent. Color-coded on the card.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-25",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Due date", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Shown on the card. Overdue tasks are highlighted in red on the dashboard.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-26",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Assignees", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Assign one or more team members. Their avatars appear on the card.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-27",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Labels", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Create colored labels for categorization. Filter the board by label.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-28",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Checklists", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Break tasks into sub-steps. Progress is shown on the card.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-29",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Comments", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Discuss tasks with your team. Threaded replies supported.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-30",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Activity log", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Full audit trail of who changed what and when.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-31",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Cover colors", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Add a color strip to visually distinguish cards.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-32",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Resource links", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Link tasks to vaults, docs, expense buckets, or other boards.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-33",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Archive", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Archive completed tasks. View and restore them from the Archived tab.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-34",
+    "type": "heading",
+    "props": { "level": 3, "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Board filters", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-35",
+    "type": "paragraph",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Use the filter bar above the board to search tasks by title, filter by priority, assignee, or label. Filters work across all three views.", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-40",
+    "type": "heading",
+    "props": { "level": 2, "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "\ud83d\udd10 Password Vaults", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-41",
+    "type": "paragraph",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Vaults store your team\u2019s credentials with end-to-end encryption. The server only ever sees ciphertext \u2014 your master password never leaves your device.", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-42",
+    "type": "heading",
+    "props": { "level": 3, "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Supported entry types", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-43",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Login", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Website username and password with URL auto-detection.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-44",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "SSH", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Host, port, username, password, and private key. Connect directly from the app.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-45",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Database", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Host, port, database name, and credentials.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-46",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "API Key", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Key, secret, and endpoint metadata.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-47",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Software License", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Product, license key, version, and licensee info.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-48",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Environment File", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Store .env KEY=value pairs.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-49",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Secure Note", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Free-form encrypted text for anything else.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-50",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Custom", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Build your own form with text, password, URL, and textarea fields.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-51",
+    "type": "heading",
+    "props": { "level": 3, "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Vault features", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-52",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Password generator", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Random, PIN, or memorable passphrase modes with strength indicator.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-53",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "SSH key generation", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Generate Ed25519 key pairs directly in the app.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-54",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Copy to clipboard", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 One-click copy for any field.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-55",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Activity history", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 See who created and modified each credential and when.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-56",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Tags", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Organize entries with searchable tags.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-57",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Import", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Bulk import credentials from CSV files.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-60",
+    "type": "heading",
+    "props": { "level": 2, "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "\ud83d\udcbb SSH Terminal", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-61",
+    "type": "paragraph",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Connect to your servers directly from TeamCore. The built-in terminal supports multiple tabbed sessions.", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-62",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "One-click connect", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Click \"Connect\" on any SSH entry in a vault to open a terminal session.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-63",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Tabbed sessions", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Multiple connections in one window. Switch between tabs or right-click to duplicate/close.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-64",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Session persistence", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Close the terminal panel and reopen it \u2014 your scrollback and session are preserved.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-65",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Open in system terminal", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Prefer your native terminal? One click opens the connection in Terminal.app or your default.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-70",
+    "type": "heading",
+    "props": { "level": 2, "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "\ud83d\udcb0 Expense Tracking", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-71",
+    "type": "paragraph",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Track your team\u2019s spending with expense buckets. Each bucket groups related expenses (e.g. Infrastructure, Marketing, SaaS tools).", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-72",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Recurring & one-time", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Weekly, monthly, quarterly, yearly, or one-time billing cycles.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-73",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Category breakdown", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Hosting, Domain, SaaS, Software, Hardware, Service, Other.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-74",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Payment tracking", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Mark expenses as paid with date and amount. View payment history.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-75",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Analytics", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Monthly burn rate, 6-month spend trend chart, category breakdown, and multi-month forecast.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-76",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Due date alerts", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Upcoming expenses appear on the dashboard. Notifications fire when they\u2019re due soon.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-80",
+    "type": "heading",
+    "props": { "level": 2, "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "\ud83d\udcc4 Docs", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-81",
+    "type": "paragraph",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "You\u2019re reading one right now! Docs are rich-text documents for your team\u2019s knowledge base.", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-82",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Slash commands", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Type / to insert headings, lists, code blocks, tables, and more.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-83",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Formatting toolbar", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Select text to bold, italicize, underline, strikethrough, code, or link.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-84",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Block handles", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Drag blocks to reorder, or click + to add a new block.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-85",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Table of contents", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Headings automatically appear in the right sidebar for quick navigation.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-86",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Manual save", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Click Save or press Cmd+S. Changes are also saved automatically when you navigate away.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-90",
+    "type": "heading",
+    "props": { "level": 2, "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "\ud83c\udfe0 Dashboard", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-91",
+    "type": "paragraph",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "The dashboard is your daily overview. At a glance you see:", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-92",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Your tasks", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Grouped by overdue, due today, due this week, upcoming, and no date.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-93",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Stats", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 My tasks count, done this week, overdue count, and monthly burn.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-94",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Upcoming expenses", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Expenses due in the next 7 days, scrollable horizontally.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-95",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Recent activity", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Who did what across all boards in the project.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-96",
+    "type": "paragraph",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Clicking a task on the dashboard navigates you to its board and opens the task detail.", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-100",
+    "type": "heading",
+    "props": { "level": 2, "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "\ud83d\udd14 Notifications", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-101",
+    "type": "paragraph",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "The bell icon in the sidebar shows your global inbox across all workspaces and projects.", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-102",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Task assigned to you, task updated, task commented, task due soon, task overdue", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-103",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Expense due soon", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-104",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Workspace invitations received", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-105",
+    "type": "paragraph",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Clicking a notification switches to the correct workspace and project, then opens the relevant resource.", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-110",
+    "type": "heading",
+    "props": { "level": 2, "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "\ud83c\udfe2 Workspaces & Access Control", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-111",
+    "type": "paragraph",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Workspaces are the top-level container. Each workspace has its own member directory, billing, and projects.", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-112",
+    "type": "heading",
+    "props": { "level": 3, "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Access patterns", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-113",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Full project access", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 A role (viewer/editor/owner) on the whole project. Cascades to all boards, vaults, buckets, and docs.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-114",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Per-resource access", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Grant access to specific boards, vaults, buckets, or docs without project-wide access.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-115",
+    "type": "paragraph",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Vault access is cryptographic \u2014 only users who hold the encryption key can read vault contents. Keys are wrapped per-user with RSA, so sharing vault access requires the admin to re-wrap the key for the recipient.", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-120",
+    "type": "heading",
+    "props": { "level": 2, "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "\u2699\ufe0f Settings", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-121",
+    "type": "paragraph",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "Access settings via Cmd+, or the gear icon. Sections:", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-122",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Account", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Edit your name, change your password, view master password status, sign out.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-123",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Appearance", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Theme (light/dark/system), style (ambient/solid), accent color, font, scale, language.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-124",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Security", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Master password mode (vaults only vs. whole app), auto-lock timer, two-factor authentication.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-125",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Shortcuts", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 Quick access pins (Cmd+Shift+1/2/3) and keyboard shortcut cheat sheet.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-126",
+    "type": "bulletListItem",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "About", "styles": { "bold": true } },
+      { "type": "text", "text": " \u2014 App version, platform, updates, diagnostics (network request log), share.", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-130",
+    "type": "heading",
+    "props": { "level": 2, "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [{ "type": "text", "text": "\u2328\ufe0f Keyboard Shortcuts", "styles": {} }],
+    "children": []
+  },
+  {
+    "id": "w-131",
+    "type": "paragraph",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Cmd+1", "styles": { "code": true } },
+      { "type": "text", "text": " Dashboard  \u00b7  ", "styles": {} },
+      { "type": "text", "text": "Cmd+K", "styles": { "code": true } },
+      { "type": "text", "text": " Search  \u00b7  ", "styles": {} },
+      { "type": "text", "text": "Cmd+N", "styles": { "code": true } },
+      { "type": "text", "text": " New item  \u00b7  ", "styles": {} },
+      { "type": "text", "text": "Cmd+,", "styles": { "code": true } },
+      { "type": "text", "text": " Settings", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-132",
+    "type": "paragraph",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "Cmd+Shift+1/2/3", "styles": { "code": true } },
+      { "type": "text", "text": " Jump to pinned quick access shortcuts (set in Settings \u2192 Shortcuts).", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-133",
+    "type": "paragraph",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "In docs: ", "styles": {} },
+      { "type": "text", "text": "Cmd+B", "styles": { "code": true } },
+      { "type": "text", "text": " Bold  \u00b7  ", "styles": {} },
+      { "type": "text", "text": "Cmd+I", "styles": { "code": true } },
+      { "type": "text", "text": " Italic  \u00b7  ", "styles": {} },
+      { "type": "text", "text": "Cmd+U", "styles": { "code": true } },
+      { "type": "text", "text": " Underline  \u00b7  ", "styles": {} },
+      { "type": "text", "text": "Cmd+S", "styles": { "code": true } },
+      { "type": "text", "text": " Save", "styles": {} }
+    ],
+    "children": []
+  },
+  {
+    "id": "w-140",
+    "type": "paragraph",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [],
+    "children": []
+  },
+  {
+    "id": "w-141",
+    "type": "paragraph",
+    "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
+    "content": [
+      { "type": "text", "text": "That\u2019s everything! Feel free to edit or delete this document. If you have questions, reach out to your workspace admin or visit ", "styles": {} },
+      { "type": "text", "text": "teamcore.space", "styles": { "bold": true } },
+      { "type": "text", "text": ".", "styles": {} }
+    ],
+    "children": []
+  }
+]
