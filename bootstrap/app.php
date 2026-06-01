@@ -47,13 +47,26 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        // Safety net: if Sanctum (or any auth guard) fails on an
-        // `api/*` route, render a JSON 401 instead of trying to
-        // redirect to the nonexistent `login` route. Belt-and-braces
-        // — the broadcast-auth fix above already removes the
-        // unprefixed trap, but this keeps the exception handler from
-        // emitting HTML on any API surface regardless of how the
-        // request's Accept header looks.
+        // API-only backend: explicitly render every
+        // AuthenticationException as a JSON 401, regardless of the
+        // request's Accept header. This sidesteps Laravel's default
+        // unauthenticated() handler which uses `$request->expectsJson()`
+        // directly (NOT shouldRenderJsonWhen) and falls back to
+        // `redirect()->guest(route('login'))`. Since this app doesn't
+        // define a `login` named route, that redirect throws
+        // RouteNotFoundException → 500 on any browser-issued request
+        // (`Accept: text/html,…`) hitting an authenticated endpoint.
+        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, Request $request) {
+            return response()->json([
+                'message' => $e->getMessage() ?: 'Unauthenticated.',
+            ], 401);
+        });
+
+        // Belt-and-braces for every OTHER exception type — if anything
+        // on an `api/*` route would otherwise render HTML, force JSON.
+        // (Doesn't fix unauthenticated specifically — that's the
+        // render() closure above — but catches misc. exceptions on
+        // the API surface.)
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request, \Throwable $e): bool => $request->is('api/*') || $request->expectsJson(),
         );
