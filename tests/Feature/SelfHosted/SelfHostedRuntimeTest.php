@@ -189,6 +189,93 @@ class SelfHostedRuntimeTest extends TestCase
             ->assertOk();
     }
 
+    public function test_auth_me_includes_broadcasting_block_on_self_hosted(): void
+    {
+        // /auth/me must surface the public Reverb connection details
+        // so the desktop client can connect WSS without falling back
+        // to its cloud-baked VITE_REVERB_* build-time env (which
+        // would attempt to subscribe with the self-hosted bearer on
+        // the cloud's cluster — see resolveBroadcastingConfig in the
+        // client).
+        $this->seedValidLicenseState();
+        config([
+            'app.url' => 'https://uwsselfhosted.vpconnectsolutions.net',
+            'broadcasting.connections.reverb.key' => 'a1b2c3d4e5',
+        ]);
+
+        $user = UserFactory::create();
+        $response = $this->actingAs($user)
+            ->getJson('/api/v1/auth/me')
+            ->assertOk();
+
+        $this->assertSame('a1b2c3d4e5', $response->json('broadcasting.app_key'));
+        $this->assertSame('uwsselfhosted.vpconnectsolutions.net', $response->json('broadcasting.host'));
+        $this->assertSame('https', $response->json('broadcasting.scheme'));
+        $this->assertSame(443, $response->json('broadcasting.port'));
+        $this->assertSame(
+            'https://uwsselfhosted.vpconnectsolutions.net/api/v1/broadcasting/auth',
+            $response->json('broadcasting.auth_endpoint'),
+        );
+    }
+
+    public function test_auth_me_omits_broadcasting_block_on_cloud(): void
+    {
+        // On cloud the desktop binary uses build-time VITE_REVERB_*
+        // values; surfacing a server-supplied block would override
+        // those and break a release that pinned a different host.
+        config(['teamcore.edition' => 'cloud']);
+        config([
+            'app.url' => 'https://api.usework.space',
+            'broadcasting.connections.reverb.key' => 'cloud-key-1',
+        ]);
+
+        $user = UserFactory::create();
+        $response = $this->actingAs($user)
+            ->getJson('/api/v1/auth/me')
+            ->assertOk();
+
+        // Whole key must be absent — `null` is not equivalent and would
+        // make the client treat broadcasting as explicitly disabled.
+        $this->assertArrayNotHasKey('broadcasting', $response->json());
+    }
+
+    public function test_auth_me_omits_broadcasting_when_reverb_key_unset(): void
+    {
+        // Self-hosted install where the operator forgot to set
+        // REVERB_APP_KEY. Returning a half-config would make
+        // pusher-js connect with an empty key and 401 every channel
+        // auth call. Better: omit, let the client treat realtime as
+        // disabled until the env is fixed.
+        $this->seedValidLicenseState();
+        config([
+            'app.url' => 'https://selfhosted.example.com',
+            'broadcasting.connections.reverb.key' => '',
+        ]);
+
+        $user = UserFactory::create();
+        $response = $this->actingAs($user)
+            ->getJson('/api/v1/auth/me')
+            ->assertOk();
+
+        $this->assertArrayNotHasKey('broadcasting', $response->json());
+    }
+
+    private function seedValidLicenseState(): void
+    {
+        $token = $this->signValidPayload();
+        $payload = $this->app->make(LicenseValidator::class)
+            ->validate($token, 'domain:test.local');
+
+        LicenseState::create([
+            'id' => 1,
+            'token' => $token,
+            'verified_payload' => $payload['payload'],
+            'verified_at' => Carbon::now()->subMinutes(30),
+            'last_phone_home_at' => Carbon::now()->subDay(),
+            'last_phone_home_ok' => true,
+        ]);
+    }
+
     public function test_license_guard_refuses_when_offline_grace_exceeded(): void
     {
         $token = $this->signValidPayload();

@@ -31,6 +31,25 @@ RUN apk add --no-cache \
 
 WORKDIR /var/www
 
+# ---- vite build stage so the runtime image carries public/build/.
+# The share-viewer Blade calls @vite([...]) which reads
+# public/build/manifest.json at request time — without this step
+# Laravel throws "Vite manifest not found" on /s/{token} and returns
+# 500. Cloud's CI runs `npm run build` before deploying; self-hosted
+# has to do it inside the image since we ship the built artifacts.
+FROM node:22-alpine AS vite
+WORKDIR /var/www
+COPY package.json package-lock.json /var/www/
+RUN npm ci --no-audit --no-fund
+COPY vite.config.js /var/www/
+# Vite reads the inputs listed in vite.config.js: resources/css/app.css,
+# resources/js/app.js, resources/share/main.jsx, resources/share/share.css
+# — copy all three subtrees so the build finds every entry + its deps.
+COPY resources/css    /var/www/resources/css
+COPY resources/js     /var/www/resources/js
+COPY resources/share  /var/www/resources/share
+RUN npm run build
+
 # ---- composer install in a vendor stage so the runtime image stays slim
 FROM base AS vendor
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
@@ -109,6 +128,14 @@ COPY config        ./config
 COPY bootstrap     ./bootstrap
 COPY public        ./public
 COPY artisan       ./artisan
+
+# Vite build output (manifest.json + hashed asset chunks). Sourced
+# from the `vite` stage above — must land AFTER `COPY public` or
+# the public/ COPY overwrites the build/ directory with the empty
+# version from the host (public/build is gitignored, so the COPY
+# would otherwise produce no build/ at all, but if anyone ever
+# unignores it we don't want a stale dev build to win).
+COPY --from=vite /var/www/public/build  ./public/build
 
 # Runtime resources. Only the two subdirectories the app actually
 # reads at runtime — the rest of resources/ is Vite source (css/, js/,
