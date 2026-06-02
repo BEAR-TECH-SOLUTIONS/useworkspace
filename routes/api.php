@@ -29,6 +29,7 @@ use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\ProjectDashboardController;
 use App\Http\Controllers\Api\V1\ProjectSearchController;
+use App\Http\Controllers\Api\V1\ServerAttestController;
 use App\Http\Controllers\Api\V1\ProjectMemberController;
 use App\Http\Controllers\Api\V1\PublicShareLinkController;
 use App\Http\Controllers\Api\V1\ShareLinkController;
@@ -68,11 +69,23 @@ Route::prefix('v1')->group(function (): void {
     // in the controller once Stripe is wired. Stubbed 501 for now.
     Route::post('/billing/webhook', [WorkspaceBillingController::class, 'webhook']);
 
+    // Anti-phishing identity probe — self-hosted installs only.
+    // Returns a cloud-signed attestation envelope (proves the install
+    // is licensed) plus the supplied nonce signed by the install's
+    // per-host Ed25519 private key (proves the responding server holds
+    // the matching private key, not just a replay of someone else's
+    // attestation). Cloud-edition replies 503 `no_attestation` — that's
+    // expected, the cloud's identity is anchored by its TLS certificate
+    // instead. Throttled per-IP — see RateLimiter::for('server-attest').
+    Route::post('/server/attest', [ServerAttestController::class, 'attest'])
+        ->middleware('throttle:server-attest');
+
     // Public landing-page waitlist signup. Heavily throttled per IP;
     // honeypot + idempotent DB insert handle the rest. See
     // WaitlistController docblock for the spam-protection layers.
     Route::post('/waitlist', [WaitlistController::class, 'store'])
         ->middleware('throttle:waitlist');
+
 
     // Public share-link endpoints (CLAUDE §10 + Universal Share Links plan).
     // Both GET and POST get a per-IP + per-token throttle (audit M5) —

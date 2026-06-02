@@ -187,6 +187,76 @@ EOF
         log "Keeping existing .env (delete it to regenerate secrets)"
     fi
 
+    # ─── 4b. Generate the per-install Ed25519 attestation keypair ──────
+    # Used by /api/v1/server/attest to sign nonces from the desktop
+    # client — proves this host actually holds the private half of the
+    # public key embedded in the cloud-signed attestation envelope, so
+    # a captured attestation can't be replayed by a phisher.
+    #
+    # The private half is a 32-byte Ed25519 seed; openssl emits PKCS#8
+    # DER where the seed is the last 32 bytes of the blob (the trailing
+    # CurvePrivateKey OCTET STRING). Same trick for the public key —
+    # X.509 SubjectPublicKeyInfo ending in the raw 32-byte point. No
+    # need to parse ASN.1 in shell — the trailer is fixed-length.
+    EXISTING_INSTANCE_PRIVATE_KEY="$(grep -E '^LICENSE_INSTANCE_PRIVATE_KEY=' .env 2>/dev/null | head -n1 | cut -d= -f2-)"
+    if [ -z "${EXISTING_INSTANCE_PRIVATE_KEY}" ]; then
+        log "Generating Ed25519 attestation keypair for this install"
+        KEYPAIR_DIR="$(mktemp -d)"
+        # shellcheck disable=SC2064  # we want $KEYPAIR_DIR expanded now
+        trap "rm -rf '${KEYPAIR_DIR}'" EXIT INT TERM
+        openssl genpkey -algorithm ED25519 -out "${KEYPAIR_DIR}/priv.pem" 2>/dev/null \
+            || die "Failed to generate Ed25519 keypair. Need OpenSSL 1.1.1+ for ED25519 support."
+
+        INSTANCE_PRIVATE_KEY="$(openssl pkey -in "${KEYPAIR_DIR}/priv.pem" -outform DER 2>/dev/null \
+            | tail -c 32 \
+            | base64 \
+            | tr -d '\n ')"
+        INSTANCE_PUBLIC_KEY="$(openssl pkey -in "${KEYPAIR_DIR}/priv.pem" -pubout -outform DER 2>/dev/null \
+            | tail -c 32 \
+            | base64 \
+            | tr -d '\n ')"
+        rm -rf "${KEYPAIR_DIR}"
+        trap - EXIT INT TERM
+
+        [ -n "${INSTANCE_PRIVATE_KEY}" ] && [ -n "${INSTANCE_PUBLIC_KEY}" ] \
+            || die "Failed to extract Ed25519 key material."
+
+        set_env_var .env "LICENSE_INSTANCE_PRIVATE_KEY" "${INSTANCE_PRIVATE_KEY}"
+        # Public key isn't strictly required at runtime (the server
+        # never reads it back — clients verify it against the
+        # attestation payload instead) but writing it makes the .env
+        # self-documenting and lets operators eyeball the key without
+        # base64-decoding the attestation.
+        set_env_var .env "LICENSE_INSTANCE_PUBLIC_KEY"  "${INSTANCE_PUBLIC_KEY}"
+    else
+        log "Keeping existing Ed25519 attestation keypair from .env"
+        INSTANCE_PUBLIC_KEY="$(grep -E '^LICENSE_INSTANCE_PUBLIC_KEY=' .env 2>/dev/null | head -n1 | cut -d= -f2-)"
+        # Rare but worth handling: older installs that had a private
+        # key but somehow lost the public key line. Re-derive it from
+        # the private key rather than asking the operator.
+        if [ -z "${INSTANCE_PUBLIC_KEY}" ]; then
+            warn "LICENSE_INSTANCE_PUBLIC_KEY missing — re-deriving from private key"
+            DERIVE_DIR="$(mktemp -d)"
+            trap "rm -rf '${DERIVE_DIR}'" EXIT INT TERM
+            # Reconstruct a PKCS#8 PEM from the raw seed:
+            #   PKCS#8 prefix (16 bytes for Ed25519) || 32-byte seed
+            # The prefix is fixed: 302e020100300506032b657004220420
+            PREFIX_HEX="302e020100300506032b657004220420"
+            SEED_HEX="$(printf '%s' "${EXISTING_INSTANCE_PRIVATE_KEY}" | base64 -d | od -An -tx1 | tr -d ' \n')"
+            printf '%s%s' "${PREFIX_HEX}" "${SEED_HEX}" \
+                | xxd -r -p \
+                | openssl pkey -inform DER -out "${DERIVE_DIR}/priv.pem" 2>/dev/null \
+                || die "Could not re-derive public key from LICENSE_INSTANCE_PRIVATE_KEY."
+            INSTANCE_PUBLIC_KEY="$(openssl pkey -in "${DERIVE_DIR}/priv.pem" -pubout -outform DER 2>/dev/null \
+                | tail -c 32 \
+                | base64 \
+                | tr -d '\n ')"
+            rm -rf "${DERIVE_DIR}"
+            trap - EXIT INT TERM
+            set_env_var .env "LICENSE_INSTANCE_PUBLIC_KEY" "${INSTANCE_PUBLIC_KEY}"
+        fi
+    fi
+
     # ─── 5. Prompt for domain + license/claim if not provided ───────────
     if [ -z "${DOMAIN}" ]; then
         printf "Fully-qualified domain for this install (e.g. workspace.acme.com): "
@@ -232,8 +302,8 @@ EOF
         fi
 
         log "Claiming license against ${API_BASE}/licenses/claim"
-        BODY="$(printf '{"claim_code":"%s","instance_id":"%s"}' \
-            "${CLAIM}" "${LICENSE_INSTANCE_ID}")"
+        BODY="$(printf '{"claim_code":"%s","instance_id":"%s","instance_public_key":"%s"}' \
+            "${CLAIM}" "${LICENSE_INSTANCE_ID}" "${INSTANCE_PUBLIC_KEY}")"
         # `--fail` makes curl exit non-zero on 4xx/5xx so a 422 / 429
         # surfaces as a script failure instead of writing junk into
         # .env. The endpoint collapses every reject reason (unknown /
@@ -249,18 +319,28 @@ EOF
 
         # Tiny JSON field extraction without a jq dependency — the
         # response shape is fixed: { "valid": true, "token": "...",
-        # "license": {...} } so a portable grep/sed lifts the token
-        # cleanly.
+        # "attestation": "...", "license": {...} } so a portable
+        # grep/sed lifts both string fields cleanly.
         LICENSE="$(printf '%s' "${RESPONSE}" \
             | tr ',' '\n' \
             | grep -E '"token"[[:space:]]*:' \
             | head -n 1 \
             | sed -E 's/.*"token"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')"
 
+        ATTESTATION="$(printf '%s' "${RESPONSE}" \
+            | tr ',' '\n' \
+            | grep -E '"attestation"[[:space:]]*:' \
+            | head -n 1 \
+            | sed -E 's/.*"attestation"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')"
+
         [ -n "${LICENSE}" ] \
             || die "Claim succeeded but the response had no token. Contact support with this install's instance id: ${LICENSE_INSTANCE_ID}"
+        [ -n "${ATTESTATION}" ] \
+            || die "Claim succeeded but the response had no attestation. Contact support with this install's instance id: ${LICENSE_INSTANCE_ID}"
 
-        log "Claim exchanged for a signed token."
+        set_env_var .env "LICENSE_ATTESTATION" "${ATTESTATION}"
+
+        log "Claim exchanged for a signed token + identity attestation."
     fi
 
     [ -n "${LICENSE}" ] || die "License is required (use --claim=ws-... or --license=...)."

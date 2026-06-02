@@ -264,6 +264,14 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        // Public anti-phishing identity probe (self-hosted installs).
+        // 60/min/ip is generous for honest desktop clients (they probe
+        // once at login) but cheap enough to refuse a sustained signing
+        // flood — every call invokes libsodium and reads env vars.
+        RateLimiter::for('server-attest', function (Request $request) {
+            return Limit::perMinute(60)->by($request->ip());
+        });
+
         // Public landing waitlist: cap per IP to deter signup spam.
         // Honeypot + email RFC/DNS check + idempotent DB insert are
         // the deeper layers; see WaitlistController docblock.
