@@ -19,7 +19,7 @@ class MeController extends Controller
         $user = $request->user();
         $token = $user->currentAccessToken();
 
-        return response()->json([
+        $payload = [
             'user' => new UserResource($user),
             'edition' => (string) config('teamcore.edition'),
             'feature_flags' => $this->featureFlags(),
@@ -28,7 +28,64 @@ class MeController extends Controller
             'session' => SessionMeta::describe(
                 $token instanceof PersonalAccessToken ? $token : null,
             ),
-        ]);
+        ];
+
+        // Self-hosted only: ship Reverb connection details so the
+        // client doesn't fall back to its build-time VITE_REVERB_*
+        // env (which points at the cloud's Reverb instance). Cloud
+        // installs omit the key entirely — pusher-js on the client
+        // keeps using its baked-in env values, as today.
+        $broadcasting = $this->broadcastingConfig();
+        if ($broadcasting !== null) {
+            $payload['broadcasting'] = $broadcasting;
+        }
+
+        return response()->json($payload);
+    }
+
+    /**
+     * Resolve the public-facing Reverb connection details from
+     * APP_URL + REVERB_APP_KEY for self-hosted installs. Returns
+     * null on cloud (client falls back to build-time env) and on
+     * self-hosted installs that don't have REVERB_APP_KEY set
+     * (treat as "broadcasting disabled" rather than ship a half-
+     * configured block).
+     *
+     * The internal REVERB_HOST / REVERB_PORT / REVERB_SCHEME env
+     * vars point at the docker-internal `reverb` service over plain
+     * HTTP — DO NOT surface those to the client. The client connects
+     * via WSS through Caddy at APP_URL's host:443 instead.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function broadcastingConfig(): ?array
+    {
+        if ((string) config('teamcore.edition') !== 'self_hosted') {
+            return null;
+        }
+
+        $appKey = (string) config('broadcasting.connections.reverb.key', '');
+        if ($appKey === '') {
+            return null;
+        }
+
+        $appUrl = (string) config('app.url');
+        $parsed = parse_url($appUrl) ?: [];
+        $host = (string) ($parsed['host'] ?? '');
+        $scheme = (string) ($parsed['scheme'] ?? 'https');
+        $port = (int) ($parsed['port'] ?? ($scheme === 'https' ? 443 : 80));
+
+        if ($host === '') {
+            return null;
+        }
+
+        return [
+            'app_key' => $appKey,
+            'host' => $host,
+            'scheme' => $scheme,
+            'port' => $port,
+            'auth_endpoint' => rtrim($appUrl, '/').'/api/v1/broadcasting/auth',
+        ];
     }
 
     /**
