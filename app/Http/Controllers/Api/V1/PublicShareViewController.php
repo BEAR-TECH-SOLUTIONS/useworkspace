@@ -34,6 +34,28 @@ class PublicShareViewController extends Controller
 
         return view('share', [
             'apiBase' => (string) config('teamcore.share.api_base', ''),
+            // Web-app origin the "Open in app" fallback redirects to
+            // when the desktop's usework:// protocol handler is not
+            // registered. Cloud: https://app.usework.space (from
+            // SHARE_UI_WEB_APP_URL); self-hosted: same origin as this
+            // share page (single-host install). Path + fragment are
+            // appended client-side from window.location so the raw
+            // token never reaches the server.
+            'webFallbackBase' => $this->resolveWebFallbackBase($request),
         ]);
+    }
+
+    private function resolveWebFallbackBase(Request $request): string
+    {
+        $configured = (string) config('teamcore.share.web_app_url', '');
+        if ($configured !== '') {
+            return rtrim($configured, '/');
+        }
+
+        // Self-hosted single-host fallback — derive scheme + host
+        // (no port suffix unless explicit) from the request itself
+        // so behind-Caddy installs Just Work without further env
+        // plumbing.
+        return rtrim($request->getSchemeAndHttpHost(), '/');
     }
 }
