@@ -110,6 +110,17 @@ COPY bootstrap     ./bootstrap
 COPY public        ./public
 COPY artisan       ./artisan
 
+# Runtime resources. Only the two subdirectories the app actually
+# reads at runtime — the rest of resources/ is Vite source (css/, js/,
+# share/) that compiles into public/build at image-build time and
+# would just bloat the runtime image.
+#   defaults/  → WelcomeDocContent reads welcome-doc.json on first
+#                project bootstrap
+#   views/     → share.blade.php rendered when a recipient opens a
+#                universal-share-link URL in a browser
+COPY resources/defaults  ./resources/defaults
+COPY resources/views     ./resources/views
+
 # Laravel introspects composer.json at runtime (Application::version,
 # package:discover, etc.) so it MUST land in the final image even
 # though composer install ran in the vendor stage. composer.lock is
