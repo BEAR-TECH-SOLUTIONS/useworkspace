@@ -73,6 +73,44 @@ validate_claim() {
         || die "Invalid claim code shape (expected ws-xxxxxx)."
 }
 
+# Mirrors the backend's Password::defaults() (AppServiceProvider:152):
+# min 12 chars, mixedCase, numbers, symbols. We validate at the prompt
+# so the operator finds out NOW instead of after the whole stack is up
+# and `tc:admin:create` rejects it (last step of install).
+#
+# Returns 0 if password is acceptable, prints the failure reason on
+# stderr and returns 1 otherwise. Cannot mirror the production HIBP
+# `uncompromised()` check — that requires a live HTTP call to the
+# pwnedpasswords API and is out of scope for install.sh. The artisan
+# command still enforces it on prod.
+validate_admin_password() {
+    pw="$1"
+    len="$(printf '%s' "${pw}" | wc -c | tr -d ' ')"
+    if [ "${len}" -lt 12 ]; then
+        printf 'Password must be at least 12 characters (got %s).\n' "${len}" >&2
+        return 1
+    fi
+    if ! printf '%s' "${pw}" | grep -q '[a-z]'; then
+        printf 'Password must contain at least one lowercase letter.\n' >&2
+        return 1
+    fi
+    if ! printf '%s' "${pw}" | grep -q '[A-Z]'; then
+        printf 'Password must contain at least one uppercase letter.\n' >&2
+        return 1
+    fi
+    if ! printf '%s' "${pw}" | grep -q '[0-9]'; then
+        printf 'Password must contain at least one number.\n' >&2
+        return 1
+    fi
+    # `symbols()` accepts anything that isn't a letter or a digit —
+    # match the same loose definition rather than enumerate a list.
+    if ! printf '%s' "${pw}" | grep -q '[^A-Za-z0-9]'; then
+        printf 'Password must contain at least one symbol (e.g. !@#$%%^&*).\n' >&2
+        return 1
+    fi
+    return 0
+}
+
 # ─── main() — everything that executes lives in here ────────────────
 
 main() {
@@ -381,19 +419,37 @@ EOF
 
     if [ -z "${ADMIN_PASSWORD}" ]; then
         # `read -s` hides input; -s isn't POSIX but Bash/Zsh both support
-        # it. Fall back to plain read if the shell rejects it.
-        printf "Initial admin password: "
-        if (read -s ADMIN_PASSWORD) 2>/dev/null; then
-            printf '\n'
-            printf "Confirm: "
-            read -s ADMIN_PASSWORD_CONFIRM
-            printf '\n'
-        else
-            read ADMIN_PASSWORD
-            printf "Confirm: "
-            read ADMIN_PASSWORD_CONFIRM
-        fi
-        [ "${ADMIN_PASSWORD}" = "${ADMIN_PASSWORD_CONFIRM}" ] || die "Passwords did not match."
+        # it. Fall back to plain read if the shell rejects it. The loop
+        # re-prompts on validation failure so the operator can fix the
+        # password NOW — before `docker compose pull` downloads hundreds
+        # of MB and the artisan command rejects it at the very end.
+        printf 'Admin password rules: min 12 chars, upper + lower + number + symbol.\n'
+        while :; do
+            printf "Initial admin password: "
+            if (read -s ADMIN_PASSWORD) 2>/dev/null; then
+                printf '\n'
+                printf "Confirm: "
+                read -s ADMIN_PASSWORD_CONFIRM
+                printf '\n'
+            else
+                read ADMIN_PASSWORD
+                printf "Confirm: "
+                read ADMIN_PASSWORD_CONFIRM
+            fi
+            if [ "${ADMIN_PASSWORD}" != "${ADMIN_PASSWORD_CONFIRM}" ]; then
+                warn "Passwords did not match. Try again."
+                continue
+            fi
+            if validate_admin_password "${ADMIN_PASSWORD}"; then
+                break
+            fi
+            warn "Please pick a stronger password and try again."
+        done
+    else
+        # --admin-password=… flag path: no retry loop, just bail with a
+        # clear message. CI scripts can fix the flag and re-run.
+        validate_admin_password "${ADMIN_PASSWORD}" \
+            || die "--admin-password does not meet the password policy."
     fi
     [ -n "${ADMIN_PASSWORD}" ] || die "Admin password is required."
 
