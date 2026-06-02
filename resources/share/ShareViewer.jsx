@@ -4,6 +4,7 @@ import { useShareLink } from './useShareLink'
 import ShareInfoBar from './components/ShareHeader'
 import PasswordForm from './components/PasswordForm'
 import ShareError from './components/ShareError'
+import OpenInAppButton from './components/OpenInAppButton'
 import BoardRenderer from './renderers/BoardRenderer'
 import TaskRenderer from './renderers/TaskRenderer'
 import CredentialRenderer from './renderers/CredentialRenderer'
@@ -43,6 +44,14 @@ export default function ShareViewer() {
       <ShareNav />
 
       <div className="max-w-6xl mx-auto px-5 sm:px-8 pt-28 pb-12">
+        {/* Top-of-page affordance: try to open the deep link in the
+            desktop app; falls back to the same web viewer after 1.5s
+            if no protocol handler is registered. Shown for every
+            visit — see OpenInAppButton for why we don't sniff. */}
+        <div className="mb-4 flex justify-end">
+          <OpenInAppButton />
+        </div>
+
         {meta && (
           <div className="mb-8">
             <ShareInfoBar shareInfo={shareInfo} />

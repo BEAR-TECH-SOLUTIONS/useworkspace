@@ -79,6 +79,13 @@ return [
     'share' => [
         'host' => env('SHARE_UI_HOST', ''),
         'api_base' => env('SHARE_UI_API_BASE', ''),
+        // Origin (scheme + host, no path) of the web app to redirect
+        // to when the "Open in app" deep-link fails. Cloud sets this
+        // to https://app.usework.space — distinct from share.host
+        // which is share.usework.space. Self-hosted leaves it empty
+        // and the controller falls back to the share page's own
+        // origin (single-host install).
+        'web_app_url' => env('SHARE_UI_WEB_APP_URL', ''),
     ],
 
     /*

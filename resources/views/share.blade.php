@@ -16,6 +16,12 @@
         // The nonce attribute pins this inline script under the
         // strict CSP set by SetShareLinkHeaders (audit M3).
         window.__TC_SHARE_API_BASE__ = @json($apiBase ?? '');
+        // Origin used by the "Open in app" button's web-fallback path
+        // when the desktop's usework:// handler isn't registered. The
+        // path + fragment are appended client-side at click time, so
+        // the raw decryption key never reaches the server — only the
+        // origin needs to flow through here.
+        window.__TC_SHARE_WEB_FALLBACK_BASE__ = @json($webFallbackBase ?? '');
     </script>
 
     @vite(['resources/share/share.css', 'resources/share/main.jsx'])
