@@ -89,11 +89,18 @@ selfhost/*
 !selfhost/entrypoint.sh
 !selfhost/Dockerfile
 
-# ─── Build pipeline assets — Vite runs in CI BEFORE docker build, ─────
-#     its manifest + assets land in public/build/ and are copied in.
-package.json
-package-lock.json
-vite.config.js
+# ─── Build pipeline assets ────────────────────────────────────────────
+# Vite now runs INSIDE the self-hosted image (see selfhost/Dockerfile's
+# `vite` stage) so package.json, package-lock.json, and vite.config.js
+# MUST be in the build context — leaving them ignored makes the COPY
+# steps in the vite stage fail at cache-key time with "file not found".
+# The cloud's deploy pipeline (different Dockerfile / different image)
+# still pre-builds public/build via rsync and is unaffected.
+#
+# resources/ is also un-ignored because the vite stage reads its
+# entries (resources/css, resources/js, resources/share); previously
+# we relied on per-subdir COPYs in the runtime stage so excluding it
+# wholesale would have been fine — that's no longer true.
 
 # ─── Internal docs / scratch ─────────────────────────────────────────
 README.md
