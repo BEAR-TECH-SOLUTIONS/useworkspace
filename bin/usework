@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+#
+# /usr/local/bin/usework — operator wrapper for the self-hosted
+# Docker Compose stack. Thin shim on top of `docker compose`; no Go
+# binary, no rewrite, edit-in-place when ops need a new subcommand.
+#
+# Install: install.sh symlinks this to /usr/local/bin/usework.
+
+set -euo pipefail
+
+INSTALL_DIR="${TC_INSTALL_DIR:-/opt/usework}"
+
+cd "${INSTALL_DIR}" 2>/dev/null || {
+    echo "usework.space not found at ${INSTALL_DIR}. Set TC_INSTALL_DIR or run install.sh first." >&2
+    exit 1
+}
+
+usage() {
+    cat <<EOF
+usework — manage a self-hosted usework.space install at ${INSTALL_DIR}
+
+Commands:
+  status              Show running containers + license expiry.
+  logs [service]      Tail logs (default: app).
+  upgrade             Pull new images, run migrations, restart the stack.
+  reset-password EMAIL
+                      Reset the password for a user via artisan tinker.
+  shell               Open a shell in the app container.
+  reload              docker compose up -d (apply env / compose changes).
+  version             Print the image tag currently pinned in .env.
+
+Anything else is forwarded to \`docker compose\`.
+EOF
+}
+
+cmd="${1:-help}"
+shift || true
+
+case "${cmd}" in
+    help|-h|--help)
+        usage
+        ;;
+    status)
+        docker compose ps
+        echo
+        # Pretty-print license expiry from the cached state.
+        docker compose exec -T app php artisan tinker --execute=\
+"echo (App\\Modules\\SelfHosted\\Models\\LicenseState::find(1)?->verified_payload['expires_at'] ?? '—');"
+        ;;
+    logs)
+        svc="${1:-app}"
+        docker compose logs -f --tail=200 "${svc}"
+        ;;
+    upgrade)
+        docker compose pull
+        docker compose run --rm app php artisan migrate --force
+        docker compose up -d
+        ;;
+    reset-password)
+        email="${1:?email required}"
+        # Audit M14: the previous form interpolated ${email} into a
+        # PHP --execute= string passed to tinker, which made any
+        # single quote / backslash / `;` in the operator-supplied
+        # email a php/shell injection vector. The dedicated
+        # `tc:user:reset-password` artisan command takes email as an
+        # argument and reads the password interactively or from
+        # TC_NEW_PASSWORD — no interpolation, no eval.
+        if [ -n "${TC_NEW_PASSWORD:-}" ]; then
+            docker compose exec -T \
+                -e TC_NEW_PASSWORD="${TC_NEW_PASSWORD}" \
+                app php artisan tc:user:reset-password "${email}"
+        else
+            # Allocate a TTY so the secret prompt works.
+            docker compose exec app php artisan tc:user:reset-password "${email}"
+        fi
+        ;;
+    shell)
+        docker compose exec app /bin/sh
+        ;;
+    reload)
+        docker compose up -d
+        ;;
+    version)
+        grep '^TC_VERSION=' .env | cut -d= -f2
+        ;;
+    *)
+        docker compose "${cmd}" "$@"
+        ;;
+esac

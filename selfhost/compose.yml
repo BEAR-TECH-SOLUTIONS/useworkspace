@@ -1,0 +1,127 @@
+# Self-hosted usework.space stack. Single-host deployment driven by the
+# install.sh wrapper. Four services, two persistent volumes.
+#
+# Usage:
+#   curl https://usework.space/install.sh | sh
+#   # …or, after install:
+#   cd /opt/usework && docker compose up -d
+#
+# Pin the image tag in production so a `docker compose pull` only
+# moves forward when the operator opts in (the install script writes
+# the current stable tag).
+
+services:
+  app:
+    image: ghcr.io/bear-tech-solutions/useworkspace:${TC_VERSION:-latest}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      TC_EDITION: self_hosted
+      # ONLY the primary app container runs `php artisan migrate` —
+      # without this gate, worker/scheduler/reverb (which share this
+      # image) race the same migration and the losers print scary
+      # "relation already exists" errors. See selfhost/entrypoint.sh.
+      TC_RUN_MIGRATIONS: "1"
+    volumes:
+      - storage:/var/www/storage
+      # public/ shared with caddy so it can stat files for try_files
+      # + serve static assets directly. Named volume auto-populates
+      # from the image's /var/www/public on first attach; subsequent
+      # image upgrades require `docker compose down -v public` (or
+      # just `docker volume rm` the public volume) before pulling the
+      # new image, otherwise the OLD public/ assets stick.
+      - app_public:/var/www/public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [internal]
+
+  scheduler:
+    image: ghcr.io/bear-tech-solutions/useworkspace:${TC_VERSION:-latest}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      TC_EDITION: self_hosted
+    # The image's entrypoint boots the license check, then we hand
+    # over to artisan schedule:work. Skip migrate on the secondary
+    # services — only `app` runs it.
+    command: ["php", "artisan", "schedule:work"]
+    volumes:
+      - storage:/var/www/storage
+    depends_on:
+      app:
+        condition: service_started
+    networks: [internal]
+
+  worker:
+    image: ghcr.io/bear-tech-solutions/useworkspace:${TC_VERSION:-latest}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      TC_EDITION: self_hosted
+    command: ["php", "artisan", "queue:work", "--sleep=1", "--tries=3"]
+    volumes:
+      - storage:/var/www/storage
+    depends_on:
+      app:
+        condition: service_started
+    networks: [internal]
+
+  reverb:
+    image: ghcr.io/bear-tech-solutions/useworkspace:${TC_VERSION:-latest}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      TC_EDITION: self_hosted
+    command: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
+    depends_on:
+      app:
+        condition: service_started
+    networks: [internal]
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-usework}
+      POSTGRES_USER: ${POSTGRES_USER:-usework}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-usework}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks: [internal]
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      TC_DOMAIN: ${TC_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      # Read-only view of the app's public/ so Caddy can stat files
+      # for `try_files` and serve static assets directly (Vite build
+      # output, etc.) without round-tripping through PHP-FPM.
+      - app_public:/var/www/public:ro
+    depends_on:
+      app:
+        condition: service_started
+    networks: [internal]
+
+volumes:
+  pg_data:
+  storage:
+  caddy_data:
+  caddy_config:
+  app_public:
+
+networks:
+  internal:

@@ -1,0 +1,70 @@
+name: Build & publish self-hosted image
+
+# This workflow lives in the public mirror at
+# github.com/BEAR-TECH-SOLUTIONS/useworkspace. The private GitLab repo
+# force-pushes the filtered tree to `main` on every successful deploy;
+# this Actions workflow then builds the self-hosted Docker image from
+# the resulting source and pushes it to GitHub Container Registry.
+#
+# Customers' install.sh runs `docker compose pull` against
+# `ghcr.io/bear-tech-solutions/useworkspace:latest`, so the package
+# MUST be marked **Public** in the GHCR UI after the first push
+# (default is private). One-time action:
+#   GitHub → repo → Packages → "useworkspace" → Package settings →
+#   Change visibility → Public.
+#
+# Auth: the workflow uses the auto-provisioned GITHUB_TOKEN with
+# `packages: write`. No manual PATs to manage.
+
+on:
+  push:
+    branches: [main]
+  # Manual trigger from the Actions UI, useful for republishing after
+  # the visibility flip or to retag without a code change.
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          # Repo-root context so the Dockerfile's `COPY app/...` etc.
+          # find the source. The Dockerfile lives in selfhost/ but its
+          # COPY paths are relative to the build context.
+          context: .
+          file: selfhost/Dockerfile
+          push: true
+          # Lowercase image path — Docker rejects uppercase. Tag with
+          # both `latest` (used by install.sh / TC_VERSION default)
+          # and the source SHA (so a self-hoster can pin to a known
+          # build via `TC_VERSION=<sha>`).
+          tags: |
+            ghcr.io/bear-tech-solutions/useworkspace:latest
+            ghcr.io/bear-tech-solutions/useworkspace:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          # GHA cache layer — first build is slow, subsequent ones
+          # reuse composer install + PHP extension layers.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
