@@ -40,7 +40,13 @@ WORKDIR /var/www
 FROM node:22-alpine AS vite
 WORKDIR /var/www
 COPY package.json package-lock.json /var/www/
-RUN npm ci --no-audit --no-fund
+# --legacy-peer-deps because laravel-vite-plugin ^3 / @vitejs/plugin-react
+# declare peer deps on older Vite majors than the ^8 this project pins.
+# The resolver in npm 7+ refuses the install on principle; the older
+# resolver (this flag) is fine and matches what local `npm install`
+# would do interactively. Once the plugins publish vite@^8-compatible
+# peer ranges, drop the flag.
+RUN npm ci --no-audit --no-fund --legacy-peer-deps
 COPY vite.config.js /var/www/
 # Vite reads the inputs listed in vite.config.js: resources/css/app.css,
 # resources/js/app.js, resources/share/main.jsx, resources/share/share.css
