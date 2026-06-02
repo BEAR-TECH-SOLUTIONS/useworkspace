@@ -6,7 +6,14 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => explode(',', env('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://localhost:3000')),
+    // Default origin list, comma-separated. Override per-env with
+    // CORS_ALLOWED_ORIGINS in .env (the env var REPLACES this default,
+    // so include every origin you need — there's no merge).
+    //   • https://app.teamcore.space   — canonical desktop / web
+    //     client origin. Baked in so self-hosted installs work
+    //     out of the box without each operator setting the env var.
+    //   • http://localhost:5173 / 3000 — local dev (Vite / Next).
+    'allowed_origins' => explode(',', env('CORS_ALLOWED_ORIGINS', 'https://app.teamcore.space')),
 
     'allowed_origins_patterns' => [],
 

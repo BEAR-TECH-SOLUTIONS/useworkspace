@@ -71,6 +71,6 @@ features, and disclose security issues.
 
 ## Stack
 
-- PHP 8.3 / Laravel 13
+- PHP 8.4 / Laravel 13
 - PostgreSQL 16
 - Laravel Reverb for WebSocket broadcasting
