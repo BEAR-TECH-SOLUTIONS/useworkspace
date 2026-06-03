@@ -140,6 +140,31 @@ class SelfHostedRuntimeTest extends TestCase
         }
     }
 
+    public function test_seat_cap_is_not_enforced_on_self_hosted(): void
+    {
+        // Regression: WorkspaceInvitationService::assertSeatAvailable
+        // reads the workspace's seat_cap COLUMN, which on a freshly
+        // installed self-hosted instance is 1 (the Free-tier default
+        // applied to every new workspace). That's a cloud-billing
+        // artifact — the license is the actual seat gate on
+        // self-hosted, enforced separately via LicenseEnforcer. Any
+        // admin adding their second user would otherwise hit
+        // "Workspace seat cap of 1 reached" on the first invite.
+        $owner = UserFactory::create();
+        $workspace = ProjectFactory::forOwner($owner)->organisation;
+
+        // Force the worst case: cap=1 and one member already present
+        // (the owner row). On cloud this would 422.
+        $workspace->forceFill(['seat_cap' => 1])->save();
+
+        $invitations = $this->app->make(\App\Services\Workspaces\WorkspaceInvitationService::class);
+
+        // No exception = self-hosted short-circuit fired. PHPUnit
+        // requires an explicit assertion for the case to register.
+        $invitations->assertSeatAvailableFor($workspace->refresh(), pendingCountsTowardCap: true);
+        $this->assertTrue(true);
+    }
+
     public function test_provisioning_is_available_on_self_hosted_regardless_of_workspace_tier(): void
     {
         // Regression: WorkspaceProvisioningService::isAvailableFor used
