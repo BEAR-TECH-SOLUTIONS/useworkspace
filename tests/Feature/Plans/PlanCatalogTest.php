@@ -16,7 +16,7 @@ class PlanCatalogTest extends TestCase
 
         $this->assertSame(0, $plans['free']['price_cents']);
         $this->assertSame('month', $plans['free']['billing_interval']);
-        $this->assertSame(1, $plans['free']['limits']['max_members']);
+        $this->assertSame(2, $plans['free']['limits']['max_members']);
         $this->assertSame(1, $plans['free']['limits']['max_projects']);
 
         $this->assertSame(999, $plans['entrepreneur']['price_cents']);

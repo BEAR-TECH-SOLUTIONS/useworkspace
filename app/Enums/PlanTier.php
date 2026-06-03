@@ -31,7 +31,7 @@ enum PlanTier: string
     public function defaultSeatCap(): int
     {
         return match ($this) {
-            self::Free => 1,
+            self::Free => 2,
             self::Entrepreneur => 10,
             self::Team => 50,
             // SelfHosted's cloud workspace is treated as a Team-tier
@@ -97,7 +97,7 @@ enum PlanTier: string
         return match ($this) {
             self::Free => [
                 'max_projects' => 1,
-                'max_members' => 1,
+                'max_members' => 2,
                 'can_provision_users' => false,
             ],
             self::Entrepreneur => [
