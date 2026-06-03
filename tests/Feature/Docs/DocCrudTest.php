@@ -37,7 +37,7 @@ class DocCrudTest extends TestCase
             ->assertJsonPath('doc.is_archived', false);
 
         // Target the just-created doc by id — the project also has a
-        // seeded "Welcome to TeamCore" doc from ProjectBootstrapper.
+        // seeded "Welcome" doc from ProjectBootstrapper.
         $doc = Doc::query()->whereKey((int) $response->json('doc.id'))->firstOrFail();
         // content_text is extracted from the Tiptap JSON for FTS.
         $this->assertStringContainsString('Welcome to the team', (string) $doc->content_text);
@@ -183,9 +183,9 @@ class DocCrudTest extends TestCase
             ->assertOk();
 
         $ids = array_column($response->json('data'), 'id');
-        // Project bootstrapping seeds a "Welcome to TeamCore" doc, so
-        // we can't assert an exact id list — just that Live is in and
-        // Archived is out.
+        // Project bootstrapping seeds a "Welcome" doc, so we can't
+        // assert an exact id list — just that Live is in and Archived
+        // is out.
         $this->assertContains($live->id, $ids);
         $this->assertNotContains($archived->id, $ids);
     }

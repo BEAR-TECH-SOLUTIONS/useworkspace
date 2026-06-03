@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Validator;
  * from $TC_NEW_PASSWORD (preferred) or an interactive secret prompt —
  * neither path ever lands the secret in argv.
  *
- * Wired by bin/usework's `reset-password` subcommand.
+ * Wired by selfhost/usework's `reset-password` subcommand.
  */
 class ResetUserPassword extends Command
 {

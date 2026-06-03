@@ -19,7 +19,7 @@ use App\Services\Docs\WelcomeDocContent;
  * Wires up everything a freshly-created project needs:
  *   - The owner's project-level ResourcePermission row (the ACL anchor)
  *   - Default board (with three columns), default vault, default expense
- *     bucket, and a "Welcome to TeamCore" doc so new users land in a
+ *     bucket, and a "Welcome" doc so new users land in a
  *     populated project instead of empty panes.
  *
  * "Project membership" lives entirely in resource_permissions now — there

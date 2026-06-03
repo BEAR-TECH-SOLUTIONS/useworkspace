@@ -140,6 +140,43 @@ class SelfHostedRuntimeTest extends TestCase
         }
     }
 
+    public function test_license_enforcer_permits_provision_when_field_absent_from_v2_payload(): void
+    {
+        // Regression: v2 self-serve license tokens carry only identity
+        // fields (license_id, instance_id, expires_at, edition) — no
+        // can_provision_users, no max_members. The enforcer used to
+        // treat the missing key as "false" and throw
+        // plan_limit_provision_users, blocking direct provisioning on
+        // every v2 install. Self-hosted has no commercial reason to
+        // gate provisioning, so an absent field must read as
+        // "unrestricted."
+        LicenseState::create([
+            'id' => 1,
+            'token' => 'placeholder',
+            // v2 minimal payload — exactly what LicenseService::claim
+            // emits today.
+            'verified_payload' => [
+                'v' => 2,
+                'license_id' => 'lic_test_v2',
+                'instance_id' => 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6',
+                'edition' => 'self_hosted',
+                'issued_at' => Carbon::now()->toIso8601String(),
+                'expires_at' => Carbon::now()->addYear()->toIso8601String(),
+            ],
+            'verified_at' => Carbon::now(),
+        ]);
+
+        $owner = UserFactory::create();
+        $workspace = ProjectFactory::forOwner($owner)->organisation;
+
+        $enforcer = $this->app->make(LicenseEnforcer::class);
+
+        // No exception = permitted. PHPUnit needs an explicit
+        // assertion to register the test as "ran".
+        $enforcer->assertCanProvisionUser($workspace->refresh());
+        $this->assertTrue(true);
+    }
+
     public function test_validator_rejects_flipped_bit_token_without_db(): void
     {
         $token = $this->signValidPayload();

@@ -64,7 +64,17 @@ class LicenseEnforcer implements PlanLimits
 
     public function assertCanProvisionUser(Organisation $workspace): void
     {
-        if (! $this->boolLimit('can_provision_users')) {
+        // Self-hosted has no provisioning restriction by default —
+        // the customer is running the software on their own
+        // infrastructure and there's no commercial reason to gate it.
+        // We DO still respect an explicit `can_provision_users: false`
+        // in the license payload (older v1 admin-issued licenses set
+        // that field) so a deliberately-restricted license keeps its
+        // restriction. Absent (the v2 self-serve payload omits the
+        // field entirely) → permit. Without this distinction, v2
+        // licenses fail the gate even though they're meant to be
+        // unrestricted.
+        if ($this->hasLimit('can_provision_users') && ! $this->boolLimit('can_provision_users')) {
             throw new PlanLimitExceeded(
                 'plan_limit_provision_users',
                 'Direct user provisioning is disabled by your license. Contact your administrator.',
@@ -87,6 +97,19 @@ class LicenseEnforcer implements PlanLimits
         $payload = $this->payload();
 
         return (bool) ($payload[$key] ?? false);
+    }
+
+    /**
+     * Did the license payload explicitly set this key? Distinct from
+     * `boolLimit` because we sometimes want to know "field absent"
+     * from "field present and false" — the former means the v2
+     * minimal payload is in use and the limit should be treated as
+     * unrestricted, while the latter is a deliberate restriction
+     * from a v1 admin-issued license.
+     */
+    private function hasLimit(string $key): bool
+    {
+        return array_key_exists($key, $this->payload());
     }
 
     /**

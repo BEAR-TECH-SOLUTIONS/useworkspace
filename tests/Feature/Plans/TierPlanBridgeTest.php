@@ -56,6 +56,25 @@ class TierPlanBridgeTest extends TestCase
         );
     }
 
+    public function test_self_hosted_tier_seat_cap_matches_team_not_10000(): void
+    {
+        // Regression: buying the self-hosted plan used to bump the
+        // cloud workspace's seat_cap to 10,000 (PlanTier::SelfHosted
+        // declared an unlimited cap). The customer pays for the
+        // self-hosted install, NOT an uncapped cloud workspace —
+        // cloud-side caps must mirror the Team plan.
+        $owner = UserFactory::create();
+        $workspace = $this->workspace($owner, tier: 'free');
+
+        $this->app->make(WorkspaceBillingService::class)
+            ->setTier($workspace, PlanTier::SelfHosted);
+
+        $workspace->refresh();
+        $this->assertSame(50, $workspace->seat_cap);
+        $this->assertSame(50, PlanTier::SelfHosted->defaultLimits()['max_members']);
+        $this->assertTrue(PlanTier::SelfHosted->defaultLimits()['can_provision_users']);
+    }
+
     public function test_downgrade_below_current_member_count_is_rejected(): void
     {
         $owner = UserFactory::create();
