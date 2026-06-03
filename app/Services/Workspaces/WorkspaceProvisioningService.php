@@ -48,6 +48,18 @@ class WorkspaceProvisioningService
 
     public function isAvailableFor(Organisation $workspace): bool
     {
+        // Self-hosted has no per-workspace plan tier — every install
+        // is licensed by definition, so the cloud's tier-feature gate
+        // doesn't apply. The downstream PlanLimits::assertCanProvisionUser
+        // (resolved to LicenseEnforcer on self-hosted) still enforces
+        // whatever the license explicitly restricts. Without this
+        // short-circuit, freshly-created self-hosted workspaces sit
+        // at the inherited default tier (typically `free`) and get
+        // a misleading "not available on this workspace plan" 403.
+        if ((string) config('teamcore.edition') === 'self_hosted') {
+            return true;
+        }
+
         $tier = $workspace->tier;
 
         // Eloquent normally returns a PlanTier via the model cast.

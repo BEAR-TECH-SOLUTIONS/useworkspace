@@ -140,6 +140,30 @@ class SelfHostedRuntimeTest extends TestCase
         }
     }
 
+    public function test_provisioning_is_available_on_self_hosted_regardless_of_workspace_tier(): void
+    {
+        // Regression: WorkspaceProvisioningService::isAvailableFor used
+        // to gate on PlanTier::supportsDirectProvisioning(), which
+        // returns false for Free/Entrepreneur. On a self-hosted install
+        // the workspace's `tier` is a meaningless artifact (no billing
+        // plan — the LICENSE is the gate), so the cloud tier check
+        // 403'd legitimate self-hosted admins with the bogus message
+        // "Direct user provisioning is not available on this workspace
+        // plan." Verifying the short-circuit returns true regardless
+        // of the workspace's nominal tier.
+        $owner = UserFactory::create();
+        $workspace = ProjectFactory::forOwner($owner)->organisation;
+
+        // Force a non-provisioning-tier on the workspace; the cloud
+        // gate would refuse this.
+        $workspace->forceFill(['tier' => 'free'])->save();
+
+        $available = $this->app->make(\App\Services\Workspaces\WorkspaceProvisioningService::class)
+            ->isAvailableFor($workspace->refresh());
+
+        $this->assertTrue($available);
+    }
+
     public function test_license_enforcer_permits_provision_when_field_absent_from_v2_payload(): void
     {
         // Regression: v2 self-serve license tokens carry only identity
