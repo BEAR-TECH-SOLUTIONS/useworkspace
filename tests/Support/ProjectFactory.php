@@ -26,7 +26,7 @@ class ProjectFactory
                 'slug' => 'org-'.Str::random(8),
                 // Default the test factory to the Team plan so multi-
                 // member invite/accept and provisioning flows don't
-                // bump into Free's cap (max_members=1) before reaching
+                // bump into Free's cap (max_members=2) before reaching
                 // the behaviour under test. Tests that exercise the
                 // Free cap override this explicitly.
                 'tier' => 'team',

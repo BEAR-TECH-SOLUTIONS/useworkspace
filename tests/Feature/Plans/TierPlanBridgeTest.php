@@ -79,7 +79,7 @@ class TierPlanBridgeTest extends TestCase
     {
         $owner = UserFactory::create();
         // Workspace with 4 members on Team (seat_cap 50). Downgrade
-        // to Free (seat_cap 1) must be refused; both the seat_cap
+        // to Free (seat_cap 2) must be refused; both the seat_cap
         // and plan_limit_members guards consider it over capacity.
         $workspace = $this->workspace($owner, tier: 'team', seatCap: 50);
 

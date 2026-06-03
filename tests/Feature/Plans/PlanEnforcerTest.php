@@ -82,12 +82,23 @@ class PlanEnforcerTest extends TestCase
     public function test_free_plan_blocks_invite_at_member_cap(): void
     {
         $owner = UserFactory::create();
-        // Free plan caps at 1 member; the owner row already fills it.
+        // Free plan caps at 2 members; owner row fills one slot. The
+        // first invite (pending counts toward cap) fills the second,
+        // and the third should be refused.
         $workspace = $this->workspaceFor($owner, plan: 'free');
 
+        // First invite consumes the second seat.
+        $this->actingAs($owner)
+            ->postJson("/api/v1/workspaces/{$workspace->id}/invitations", [
+                'email' => 'one@example.com',
+                'role' => 'member',
+            ])
+            ->assertCreated();
+
+        // Second invite trips the plan_limit_members guard.
         $response = $this->actingAs($owner)
             ->postJson("/api/v1/workspaces/{$workspace->id}/invitations", [
-                'email' => 'someone@example.com',
+                'email' => 'two@example.com',
                 'role' => 'member',
             ])
             ->assertStatus(422);
