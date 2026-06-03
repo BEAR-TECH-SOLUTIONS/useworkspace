@@ -691,6 +691,18 @@ class WorkspaceInvitationService
         string $code = 'seat_cap_exceeded',
         int $status = 422,
     ): void {
+        // Self-hosted: the seat_cap column is a cloud-billing artifact
+        // (defaults to PlanTier::Free's cap of 1 on freshly-created
+        // workspaces) and has no commercial meaning here. The license
+        // is the only legitimate seat gate, and LicenseEnforcer
+        // (called separately via PlanLimits::assertCanAddMember) is
+        // what enforces it. Without this short-circuit, a self-hosted
+        // admin gets a misleading "Workspace seat cap of 1 reached"
+        // 422 on their very first member invitation.
+        if ((string) config('teamcore.edition') === 'self_hosted') {
+            return;
+        }
+
         $cap = (int) $workspace->seat_cap;
 
         $members = OrganisationMember::query()
