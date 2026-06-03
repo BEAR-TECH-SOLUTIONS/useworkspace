@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://cdn.usework.space/screenshots/app-screenshot.png" alt="usework.space app screenshot" width="900" />
+</p>
+
 <h1 align="center">usework.space</h1>
 
 <p align="center">

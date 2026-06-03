@@ -76,9 +76,6 @@ Thumbs.db
 deploy.php
 deployment
 
-# ─── Operator wrapper lives at /usr/local/bin on customer hosts ──────
-bin
-
 # ─── Selfhost distribution artefacts ─────────────────────────────────
 # Operators download install.sh / compose.yml / Caddyfile from the
 # public bootstrap host; the IMAGE only needs the entrypoint. The

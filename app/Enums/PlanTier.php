@@ -34,7 +34,13 @@ enum PlanTier: string
             self::Free => 1,
             self::Entrepreneur => 10,
             self::Team => 50,
-            self::SelfHosted => 10_000,
+            // SelfHosted's cloud workspace is treated as a Team-tier
+            // org for cap purposes — the customer is paying for the
+            // self-hosted install (license slot + image), not for an
+            // uncapped cloud workspace. Member growth on the cloud
+            // side stays inside the same envelope as Team; uncapped
+            // member growth happens on the install they run.
+            self::SelfHosted => 50,
         };
     }
 
@@ -104,9 +110,15 @@ enum PlanTier: string
                 'max_members' => 50,
                 'can_provision_users' => true,
             ],
+            // SelfHosted mirrors Team on the cloud side — buying the
+            // self-hosted plan gives Team-equivalent cloud limits PLUS
+            // an unclaimed license slot for the install. The install
+            // itself enforces caps via LicenseEnforcer (which treats
+            // an absent payload field as "unlimited"), so uncapped
+            // member growth lives there, not here.
             self::SelfHosted => [
                 'max_projects' => null,
-                'max_members' => null,
+                'max_members' => 50,
                 'can_provision_users' => true,
             ],
         };

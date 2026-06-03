@@ -203,6 +203,30 @@ EOF
         fi
     done
 
+    # ─── 3b. Install the `usework` host-side operator wrapper ───────────
+    # Symlink target lives outside ${INSTALL_DIR} so operators can call
+    # `usework status` from anywhere on the host. The wrapper itself
+    # cds into INSTALL_DIR before shelling docker compose so the
+    # /opt/usework files are always the active project. Always
+    # overwrite — the wrapper is small, idempotent, and a stale copy
+    # would silently miss new subcommands after an upgrade.
+    USEWORK_BIN="${TC_USEWORK_BIN:-/usr/local/bin/usework}"
+    if [ -w "$(dirname "${USEWORK_BIN}")" ] || command -v sudo >/dev/null 2>&1; then
+        log "Installing usework wrapper at ${USEWORK_BIN}"
+        if [ -w "$(dirname "${USEWORK_BIN}")" ]; then
+            curl -fsSL "${COMPOSE_RAW}/usework" -o "${USEWORK_BIN}" \
+                && chmod +x "${USEWORK_BIN}"
+        else
+            TMP_WRAPPER="$(mktemp)"
+            curl -fsSL "${COMPOSE_RAW}/usework" -o "${TMP_WRAPPER}" \
+                && sudo install -m 0755 "${TMP_WRAPPER}" "${USEWORK_BIN}"
+            rm -f "${TMP_WRAPPER}"
+        fi
+    else
+        warn "Skipping usework wrapper install — no write access to $(dirname "${USEWORK_BIN}") and sudo not available."
+        warn "Copy selfhost/usework manually if you want the day-2 helper."
+    fi
+
     # ─── 4. Generate local secrets if missing ───────────────────────────
     if [ ! -f .env ]; then
         log "Generating .env with fresh secrets"

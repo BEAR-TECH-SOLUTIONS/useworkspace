@@ -3,15 +3,15 @@
 namespace App\Services\Docs;
 
 /**
- * Loads the canonical "Welcome to TeamCore" doc content from the
- * resources directory once per process. The BlockNote JSON is sizable
+ * Loads the canonical "Welcome" doc content from the resources
+ * directory once per process. The BlockNote JSON is sizable
  * (~140 blocks) so we cache the parsed array statically to avoid
  * re-reading the file on every project creation inside a long-running
  * request or queue worker.
  */
 class WelcomeDocContent
 {
-    public const TITLE = 'Welcome to TeamCore';
+    public const TITLE = 'Welcome';
 
     /** @var array<int, array<string, mixed>>|null */
     private static ?array $cachedContent = null;

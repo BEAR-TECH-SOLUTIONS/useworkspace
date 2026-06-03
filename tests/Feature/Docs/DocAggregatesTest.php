@@ -92,12 +92,12 @@ class DocAggregatesTest extends TestCase
 
         // Resource-tree uses `name` (not `title`) for uniformity with
         // boards/vaults/buckets — spec §"Note: use name (not title)".
-        // ProjectBootstrapper seeds a "Welcome to TeamCore" doc, so
-        // the list has two entries: the seeded one and our test doc.
+        // ProjectBootstrapper seeds a "Welcome" doc, so the list has
+        // two entries: the seeded one and our test doc.
         $docsByName = collect($entry['docs'])->keyBy('name');
         $this->assertTrue($docsByName->has('Tree doc'));
         $this->assertSame($doc->id, $docsByName->get('Tree doc')['id']);
-        $this->assertTrue($docsByName->has('Welcome to TeamCore'));
+        $this->assertTrue($docsByName->has('Welcome'));
     }
 
     public function test_project_bootstrap_seeds_welcome_doc(): void
@@ -107,7 +107,7 @@ class DocAggregatesTest extends TestCase
 
         $doc = \App\Models\Docs\Doc::query()
             ->where('project_id', $project->id)
-            ->where('title', 'Welcome to TeamCore')
+            ->where('title', 'Welcome')
             ->firstOrFail();
 
         // Content JSONB and FTS-ready plaintext both populated from
