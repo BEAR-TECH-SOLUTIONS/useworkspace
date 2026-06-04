@@ -17,24 +17,26 @@ use Tests\TestCase;
  */
 class PlanEnforcerTest extends TestCase
 {
-    public function test_free_plan_allows_first_project_and_blocks_second(): void
+    public function test_free_plan_allows_first_two_projects_and_blocks_third(): void
     {
         $owner = UserFactory::create();
         $workspace = $this->workspaceFor($owner, plan: 'free');
 
-        // First project succeeds.
-        $this->actingAs($owner)
-            ->postJson('/api/v1/projects', [
-                'organisation_id' => $workspace->id,
-                'name' => 'Project one',
-            ])
-            ->assertCreated();
+        // First two projects succeed (Free cap = 2 projects).
+        foreach (['Project one', 'Project two'] as $name) {
+            $this->actingAs($owner)
+                ->postJson('/api/v1/projects', [
+                    'organisation_id' => $workspace->id,
+                    'name' => $name,
+                ])
+                ->assertCreated();
+        }
 
-        // Second tips over the cap.
+        // Third tips over the cap.
         $response = $this->actingAs($owner)
             ->postJson('/api/v1/projects', [
                 'organisation_id' => $workspace->id,
-                'name' => 'Project two',
+                'name' => 'Project three',
             ])
             ->assertStatus(422);
 
