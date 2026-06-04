@@ -96,7 +96,7 @@ enum PlanTier: string
     {
         return match ($this) {
             self::Free => [
-                'max_projects' => 1,
+                'max_projects' => 2,
                 'max_members' => 2,
                 'can_provision_users' => false,
             ],
