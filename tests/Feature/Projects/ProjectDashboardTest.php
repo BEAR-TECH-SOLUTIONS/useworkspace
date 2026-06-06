@@ -13,6 +13,7 @@ use App\Models\Tasks\TaskBoard;
 use App\Models\Tasks\TaskColumn;
 use App\Models\Tasks\TaskItem;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Tests\Support\ProjectFactory;
 use Tests\Support\UserFactory;
 use Tests\TestCase;
@@ -171,6 +172,184 @@ class ProjectDashboardTest extends TestCase
 
         $this->assertSame('70.00', $response->json('stats.monthly_burn'));
         $this->assertSame('USD', $response->json('stats.monthly_burn_currency'));
+        $this->assertSame('native', $response->json('stats.monthly_burn_fx_status'));
+    }
+
+    public function test_monthly_burn_converts_mixed_currencies_before_summing(): void
+    {
+        // Regression for the bug where a project mixing EUR + RUB
+        // (or any non-uniform currency) summed the raw amounts and
+        // mislabeled the total as whichever currency happened to be
+        // most common. The dashboard now FX-converts each amount
+        // into the majority currency before summing, so a RUB
+        // amortization sits on the same scale as the EUR one.
+        $this->fakeFxResponse(['USD' => '2.00']);  // 1 EUR = 2 USD
+
+        $owner = UserFactory::create();
+        $project = ProjectFactory::forOwner($owner);
+        $bucket = ExpenseBucket::create([
+            'project_id' => $project->id,
+            'name' => 'B',
+            'currency' => 'EUR',
+            'is_default' => false,
+            'created_by' => $owner->id,
+        ]);
+
+        // Majority is EUR (2 rows EUR vs 1 USD). Two EUR monthlies sum
+        // to 30 EUR; one 60 USD monthly converts to 30 EUR. Expected:
+        // 60.00 EUR total.
+        Expense::create([
+            'project_id' => $project->id,
+            'bucket_id' => $bucket->id,
+            'name' => 'Eur monthly A',
+            'category' => 'saas',
+            'amount' => '10.00',
+            'currency' => 'EUR',
+            'billing_cycle' => 'monthly',
+            'created_by' => $owner->id,
+        ]);
+        Expense::create([
+            'project_id' => $project->id,
+            'bucket_id' => $bucket->id,
+            'name' => 'Eur monthly B',
+            'category' => 'saas',
+            'amount' => '20.00',
+            'currency' => 'EUR',
+            'billing_cycle' => 'monthly',
+            'created_by' => $owner->id,
+        ]);
+        Expense::create([
+            'project_id' => $project->id,
+            'bucket_id' => $bucket->id,
+            'name' => 'Usd monthly',
+            'category' => 'saas',
+            'amount' => '60.00',
+            'currency' => 'USD',
+            'billing_cycle' => 'monthly',
+            'created_by' => $owner->id,
+        ]);
+
+        $response = $this->actingAs($owner)
+            ->getJson("/api/v1/projects/{$project->id}/dashboard")
+            ->assertOk();
+
+        $this->assertSame('60.00', $response->json('stats.monthly_burn'));
+        $this->assertSame('EUR', $response->json('stats.monthly_burn_currency'));
+        $this->assertSame('converted', $response->json('stats.monthly_burn_fx_status'));
+    }
+
+    public function test_monthly_burn_marks_partial_when_fx_unavailable_for_some_rows(): void
+    {
+        // Upstream rate-book returns USD only; RUB is missing, so the
+        // dashboard drops the RUB row rather than mislabel the sum.
+        // Status flips to 'partial' so the client can show a hint
+        // that the headline number is a floor.
+        $this->fakeFxResponse(['USD' => '2.00']);  // 1 EUR = 2 USD; no RUB
+
+        $owner = UserFactory::create();
+        $project = ProjectFactory::forOwner($owner);
+        $bucket = ExpenseBucket::create([
+            'project_id' => $project->id,
+            'name' => 'B',
+            'currency' => 'EUR',
+            'is_default' => false,
+            'created_by' => $owner->id,
+        ]);
+
+        Expense::create([
+            'project_id' => $project->id,
+            'bucket_id' => $bucket->id,
+            'name' => 'Eur monthly',
+            'category' => 'saas',
+            'amount' => '10.00',
+            'currency' => 'EUR',
+            'billing_cycle' => 'monthly',
+            'created_by' => $owner->id,
+        ]);
+        Expense::create([
+            'project_id' => $project->id,
+            'bucket_id' => $bucket->id,
+            'name' => 'Rub yearly (unsupported FX)',
+            'category' => 'domain',
+            'amount' => '5355.00',
+            'currency' => 'RUB',
+            'billing_cycle' => 'yearly',
+            'created_by' => $owner->id,
+        ]);
+
+        $response = $this->actingAs($owner)
+            ->getJson("/api/v1/projects/{$project->id}/dashboard")
+            ->assertOk();
+
+        // Only the EUR row contributes; RUB is dropped.
+        $this->assertSame('10.00', $response->json('stats.monthly_burn'));
+        $this->assertSame('EUR', $response->json('stats.monthly_burn_currency'));
+        $this->assertSame('partial', $response->json('stats.monthly_burn_fx_status'));
+    }
+
+    public function test_monthly_burn_excludes_one_time_expenses(): void
+    {
+        // ONE-TIME is not recurring; it must not contribute to the
+        // monthly burn even on a single-currency project. (Sanity
+        // check on the WHERE billing_cycle != 'one_time' clause that
+        // would otherwise be invisible since pre-existing tests only
+        // use recurring rows.)
+        $owner = UserFactory::create();
+        $project = ProjectFactory::forOwner($owner);
+        $bucket = ExpenseBucket::create([
+            'project_id' => $project->id,
+            'name' => 'B',
+            'currency' => 'USD',
+            'is_default' => false,
+            'created_by' => $owner->id,
+        ]);
+
+        Expense::create([
+            'project_id' => $project->id,
+            'bucket_id' => $bucket->id,
+            'name' => 'Recurring',
+            'category' => 'saas',
+            'amount' => '15.00',
+            'currency' => 'USD',
+            'billing_cycle' => 'monthly',
+            'created_by' => $owner->id,
+        ]);
+        Expense::create([
+            'project_id' => $project->id,
+            'bucket_id' => $bucket->id,
+            'name' => 'One-time purchase',
+            'category' => 'hosting',
+            'amount' => '299.00',
+            'currency' => 'USD',
+            'billing_cycle' => 'one_time',
+            'created_by' => $owner->id,
+        ]);
+
+        $response = $this->actingAs($owner)
+            ->getJson("/api/v1/projects/{$project->id}/dashboard")
+            ->assertOk();
+
+        $this->assertSame('15.00', $response->json('stats.monthly_burn'));
+    }
+
+    /**
+     * Stub exchangeratesapi.io with a deterministic rate-book —
+     * matches the harness used by ExpenseFxConversionTest so the
+     * same Http::fake contract works here.
+     *
+     * @param  array<string, int|float|string>  $rates
+     */
+    private function fakeFxResponse(array $rates): void
+    {
+        Http::fake([
+            'api.exchangeratesapi.io/*' => Http::response([
+                'success' => true,
+                'timestamp' => now()->timestamp,
+                'base' => 'EUR',
+                'date' => now()->toDateString(),
+                'rates' => $rates,
+            ], 200),
+        ]);
     }
 
     public function test_upcoming_expenses_sorted_by_due_date(): void

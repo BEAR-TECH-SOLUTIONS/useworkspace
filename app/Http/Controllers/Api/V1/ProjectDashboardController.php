@@ -14,6 +14,8 @@ use App\Models\Project\Project;
 use App\Models\Tasks\TaskActivity;
 use App\Models\Tasks\TaskItem;
 use App\Models\Vault\Credential;
+use App\Services\Fx\FxRateService;
+use App\Services\Fx\FxUnsupportedCurrencyException;
 use App\Services\Permissions\PermissionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,7 +32,10 @@ use Illuminate\Support\Facades\DB;
  */
 class ProjectDashboardController extends Controller
 {
-    public function __construct(private readonly PermissionService $perms) {}
+    public function __construct(
+        private readonly PermissionService $perms,
+        private readonly FxRateService $fx,
+    ) {}
 
     public function __invoke(Request $request, Project $project): JsonResponse
     {
@@ -153,7 +158,7 @@ class ProjectDashboardController extends Controller
         }
         $totalCredentialCount = $credQuery->count();
 
-        [$monthlyBurn, $burnCurrency] = $this->computeMonthlyBurn($project, $visibleBucketIds);
+        [$monthlyBurn, $burnCurrency, $burnFxStatus] = $this->computeMonthlyBurn($project, $visibleBucketIds);
 
         return [
             'my_task_count' => $myTaskCount,
@@ -162,11 +167,34 @@ class ProjectDashboardController extends Controller
             'upcoming_expense_count' => $upcomingExpenseCount,
             'total_task_count' => $totalTaskCount,
             'total_credential_count' => $totalCredentialCount,
-            'monthly_burn' => number_format($monthlyBurn, 2, '.', ''),
+            'monthly_burn' => $monthlyBurn,
             'monthly_burn_currency' => $burnCurrency,
+            // Hint for the client: 'native' (all expenses already in
+            // the display currency), 'converted' (some rows were
+            // FX-converted in), 'partial' (one or more rows had no
+            // FX rate and were dropped — the sum is honest but
+            // understates).
+            'monthly_burn_fx_status' => $burnFxStatus,
         ];
     }
 
+    /**
+     * Estimated monthly burn, currency-converted into a single display
+     * currency so a mixed-currency project doesn't get summed naively
+     * (the old code dumped RUB and EUR amounts into the same total
+     * and labeled it as whichever currency happened to occur most
+     * often — see audit note below).
+     *
+     * Display currency is the most-common among recurring rows,
+     * matching what the bucket-level "monthly recurring" tile shows.
+     * Each amount is FX-converted via {@see FxRateService}; if the
+     * service can't price a particular currency the row is dropped
+     * from the sum and the status flips to `partial` so the client
+     * can render a hint. The remaining sum stays internally
+     * consistent — better to under-report than to mis-label.
+     *
+     * @return array{0: string, 1: string, 2: 'native'|'converted'|'partial'}
+     */
     private function computeMonthlyBurn(Project $project, $visibleBucketIds): array
     {
         $expenses = Expense::query()
@@ -175,21 +203,57 @@ class ProjectDashboardController extends Controller
             ->where('billing_cycle', '!=', BillingCycle::OneTime->value)
             ->get();
 
-        $sum = 0;
-        foreach ($expenses as $e) {
-            $amount = (float) $e->amount;
-            $sum += match ($e->billing_cycle) {
-                BillingCycle::Monthly => $amount,
-                BillingCycle::Quarterly => round($amount / 3, 2),
-                BillingCycle::Yearly => round($amount / 12, 2),
-                default => $amount,
-            };
+        if ($expenses->isEmpty()) {
+            return ['0.00', 'USD', 'native'];
         }
 
-        // Most common currency.
-        $currency = $expenses->countBy('currency')->sortDesc()->keys()->first() ?? 'USD';
+        $displayCurrency = strtoupper(
+            (string) ($expenses->countBy('currency')->sortDesc()->keys()->first() ?? 'USD'),
+        );
 
-        return [$sum, $currency];
+        $sum = '0';
+        $status = 'native';
+
+        // Intermediate precision matches ExpenseAnalyticsController:
+        // 6 decimals is enough headroom that monthly amortizations of
+        // yearly amounts don't lose meaningful cents before the final
+        // round to 2 places.
+        $scale = 6;
+
+        foreach ($expenses as $e) {
+            $rowCurrency = strtoupper((string) $e->currency);
+            $amount = (string) $e->amount;
+
+            if ($rowCurrency !== $displayCurrency) {
+                try {
+                    $amount = $this->fx->convert($rowCurrency, $displayCurrency, $amount);
+                    if ($status === 'native') {
+                        $status = 'converted';
+                    }
+                } catch (\Throwable) {
+                    // FX unavailable for this pair (unsupported
+                    // currency, upstream down, etc.). Drop the row
+                    // rather than mis-label it. The visible total is
+                    // a floor, not a ceiling.
+                    $status = 'partial';
+                    continue;
+                }
+            }
+
+            $sum = bcadd($sum, match ($e->billing_cycle) {
+                BillingCycle::Monthly => $amount,
+                BillingCycle::Quarterly => bcdiv($amount, '3', $scale),
+                BillingCycle::Yearly => bcdiv($amount, '12', $scale),
+                default => $amount,
+            }, $scale);
+        }
+
+        // Round to 2 decimal places using bcadd with '0' (avoids
+        // float precision loss that number_format(float) would
+        // introduce on large sums).
+        $rounded = bcadd($sum, '0', 2);
+
+        return [$rounded, $displayCurrency, $status];
     }
 
     private function buildMyTasks($user, Project $project, $visibleColumnIds, $myTaskIds, Carbon $today, Carbon $weekStart, Carbon $weekEnd): array
