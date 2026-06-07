@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ExternalLink } from 'lucide-react'
 import { useParams } from 'react-router-dom'
 
@@ -32,12 +32,35 @@ export default function OpenInAppButton() {
   const { tokenHash } = useParams()
   const firedAtRef = useRef(0)
 
+  // Track window.location.hash in state so the rendered <a href>
+  // carries the fragment. The fragment holds the raw decryption
+  // token — without it the desktop app receives a "tokenHash but
+  // no key" link and renders the same broken state the web viewer
+  // would in `missing_key`. Hash changes on this page are
+  // exceedingly rare (the share viewer is single-page-load), but
+  // listening to `hashchange` keeps the href honest if the user
+  // ever pastes a fresh token mid-session.
+  const [fragment, setFragment] = useState(() =>
+    typeof window !== 'undefined' ? window.location.hash : ''
+  )
+  useEffect(() => {
+    const onHashChange = () => setFragment(window.location.hash || '')
+    window.addEventListener('hashchange', onHashChange)
+    return () => window.removeEventListener('hashchange', onHashChange)
+  }, [])
+
   const onClick = useCallback((e) => {
     e.preventDefault()
     if (!tokenHash) return
 
-    const hash = window.location.hash || ''
-    const deepLink = `usework://s/${encodeURIComponent(tokenHash)}${hash}`
+    // Read at click time so the very latest fragment wins even if
+    // a hashchange landed between render and click. The href is
+    // also kept in sync via state above so OS-level handoffs that
+    // bypass the click handler (right-click copy, middle-click,
+    // Safari handing the href straight to the protocol handler)
+    // still carry the token.
+    const liveHash = window.location.hash || ''
+    const deepLink = `usework://s/${encodeURIComponent(tokenHash)}${liveHash}`
 
     firedAtRef.current = Date.now()
     window.location.href = deepLink
@@ -56,11 +79,17 @@ export default function OpenInAppButton() {
     }, 1500)
   }, [tokenHash])
 
-  // Build a non-empty href so the anchor is a real link for
-  // assistive tech / keyboard users + so right-click → copy link
-  // gives the deep link. The actual navigation goes through the
-  // click handler above (which calls preventDefault).
-  const href = tokenHash ? `usework://s/${encodeURIComponent(tokenHash)}` : '#'
+  // href MUST include the live fragment. Without it, every code
+  // path that bypasses onClick (right-click copy, middle-click,
+  // Safari's straight-to-protocol-handler dispatch on custom
+  // schemes) emits a usework:// link with no token, and the
+  // desktop app renders the same `missing_key` error the web
+  // viewer would. Building the href from state keeps it honest
+  // across hashchange events while still being a real anchor
+  // for assistive tech / keyboard activation.
+  const href = tokenHash
+    ? `usework://s/${encodeURIComponent(tokenHash)}${fragment}`
+    : '#'
 
   return (
     <a
