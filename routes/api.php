@@ -33,6 +33,7 @@ use App\Http\Controllers\Api\V1\ServerAttestController;
 use App\Http\Controllers\Api\V1\ProjectMemberController;
 use App\Http\Controllers\Api\V1\PublicShareLinkController;
 use App\Http\Controllers\Api\V1\ShareLinkController;
+use App\Http\Controllers\Api\V1\ShareLinkNavigationController;
 use App\Http\Controllers\Api\V1\TaskActivityController;
 use App\Http\Controllers\Api\V1\TaskAssigneeController;
 use App\Http\Controllers\Api\V1\TaskBoardController;
@@ -142,6 +143,19 @@ Route::prefix('v1')->group(function (): void {
 
         // Browser extension — cross-workspace credential lookup by domain.
         Route::get('/me/credentials/by-url', CredentialByUrlController::class);
+
+        // Share-link navigation lookup. Hit by the desktop client right
+        // after the `usework://s/{tokenHash}` deep-link opens the app:
+        // exchanges the public token hash for the board_id / vault_id /
+        // bucket_id + project_id the in-app router needs to land on the
+        // right page. Distinct from the owner-side /share-links/{id}
+        // (which is by-id + owner-only + returns the snapshot) and from
+        // the public /share-links/{tokenHash} (which is anonymous +
+        // returns the encrypted blob + counts as a recipient view).
+        // Deliberately OUTSIDE `master-password.set` so the deep-link
+        // works even when the master-password handshake hasn't run yet.
+        Route::get('/share-links/by-hash/{tokenHash}', [ShareLinkNavigationController::class, 'showByHash'])
+            ->where('tokenHash', '[a-f0-9]{64}');
 
         // Global notifications inbox. Every endpoint is scoped to the
         // authenticated user implicitly — no user id in the URL.
