@@ -10,7 +10,7 @@
     "id": "w-2",
     "type": "paragraph",
     "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
-    "content": [{ "type": "text", "text": "TeamCore is your all-in-one workspace for managing projects, storing credentials securely, tracking expenses, and documenting everything \u2014 all with end-to-end encryption where it matters. This guide walks you through every feature so your team can hit the ground running.", "styles": {} }],
+    "content": [{ "type": "text", "text": "usework.space is your all-in-one workspace for managing projects, storing credentials securely, tracking expenses, and documenting everything \u2014 all with end-to-end encryption where it matters. This guide walks you through every feature so your team can hit the ground running.", "styles": {} }],
     "children": []
   },
   {
@@ -24,7 +24,7 @@
     "id": "w-11",
     "type": "paragraph",
     "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
-    "content": [{ "type": "text", "text": "Task boards are the core of project management in TeamCore. Each project can have multiple boards, and each board supports three views.", "styles": {} }],
+    "content": [{ "type": "text", "text": "Task boards are the core of project management in usework.space. Each project can have multiple boards, and each board supports three views.", "styles": {} }],
     "children": []
   },
   {
@@ -404,7 +404,7 @@
     "id": "w-61",
     "type": "paragraph",
     "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
-    "content": [{ "type": "text", "text": "Connect to your servers directly from TeamCore. The built-in terminal supports multiple tabbed sessions.", "styles": {} }],
+    "content": [{ "type": "text", "text": "Connect to your servers directly from usework.space. The built-in terminal supports multiple tabbed sessions.", "styles": {} }],
     "children": []
   },
   {
@@ -853,7 +853,7 @@
     "props": { "textColor": "default", "backgroundColor": "default", "textAlignment": "left" },
     "content": [
       { "type": "text", "text": "That\u2019s everything! Feel free to edit or delete this document. If you have questions, reach out to your workspace admin or visit ", "styles": {} },
-      { "type": "text", "text": "teamcore.space", "styles": { "bold": true } },
+      { "type": "text", "text": "usework.space", "styles": { "bold": true } },
       { "type": "text", "text": ".", "styles": {} }
     ],
     "children": []
