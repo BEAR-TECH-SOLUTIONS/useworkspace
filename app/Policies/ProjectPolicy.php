@@ -42,9 +42,7 @@ class ProjectPolicy
             return false;
         }
 
-        // Destructive ops are restricted to the user who originally
-        // created the project, not every owner-role member.
-        return $user->id === $project->original_owner_id;
+        return $this->canDestroy($user, $project);
     }
 
     public function purgeContents(User $user, Project $project): bool
@@ -53,6 +51,19 @@ class ProjectPolicy
             return false;
         }
 
-        return $user->id === $project->original_owner_id;
+        return $this->canDestroy($user, $project);
+    }
+
+    /**
+     * Destructive project operations are authorised for the user who
+     * originally created the project, or the owner of the workspace
+     * (organisation) the project belongs to — so a workspace owner can
+     * wipe projects created by their members. Other owner-role project
+     * members and non-owner workspace admins still receive 403.
+     */
+    private function canDestroy(User $user, Project $project): bool
+    {
+        return $user->id === $project->original_owner_id
+            || $user->id === $project->organisation->owner_id;
     }
 }

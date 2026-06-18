@@ -13,6 +13,7 @@ use App\Models\Permissions\ResourcePermission;
 use App\Models\Project\Project;
 use App\Models\User;
 use App\Models\Vault\Vault;
+use App\Services\Auth\TotpService;
 use Tests\Support\ProjectFactory;
 use Tests\Support\UserFactory;
 use Tests\TestCase;
@@ -154,6 +155,65 @@ class WorkspaceOwnerAccessTest extends TestCase
             ->assertJsonPath('code', 'workspace_owner_immutable');
     }
 
+    public function test_workspace_owner_can_delete_member_created_project(): void
+    {
+        [$owner, $workspace, $member] = $this->workspaceWithMember();
+        $project = $this->createProjectAs($member, $workspace);
+
+        // Owner is neither the project's original_owner_id (the member
+        // created it) nor a personal-project owner — but as the
+        // workspace owner they may still destroy it. Delete is 2FA-gated.
+        $this->pass2fa($owner);
+
+        $this->actingAs($owner->refresh())
+            ->deleteJson("/api/v1/projects/{$project->id}")
+            ->assertNoContent();
+
+        $this->assertDatabaseMissing('projects', ['id' => $project->id]);
+    }
+
+    public function test_workspace_owner_can_purge_member_created_project_contents(): void
+    {
+        [$owner, $workspace, $member] = $this->workspaceWithMember();
+        $project = $this->createProjectAs($member, $workspace);
+        $board = $project->boards()->where('is_default', true)->firstOrFail();
+
+        $this->pass2fa($owner);
+
+        $this->actingAs($owner->refresh())
+            ->deleteJson("/api/v1/projects/{$project->id}/contents")
+            ->assertNoContent();
+
+        // Project shell survives; its children are wiped.
+        $this->assertDatabaseHas('projects', ['id' => $project->id]);
+        $this->assertDatabaseMissing('task_boards', ['id' => $board->id]);
+    }
+
+    public function test_non_owner_workspace_admin_cannot_delete_member_created_project(): void
+    {
+        [$owner, $workspace, $member] = $this->workspaceWithMember();
+        $project = $this->createProjectAs($member, $workspace);
+
+        // A second workspace admin who is NOT organisations.owner_id.
+        // The widening is scoped to the single workspace owner, so an
+        // admin-role member still gets 403 even after clearing 2FA.
+        $admin = UserFactory::create();
+        OrganisationMember::create([
+            'organisation_id' => $workspace->id,
+            'user_id' => $admin->id,
+            'role' => OrganisationRole::Admin->value,
+            'invited_by' => $owner->id,
+        ]);
+
+        $this->pass2fa($admin);
+
+        $this->actingAs($admin->refresh())
+            ->deleteJson("/api/v1/projects/{$project->id}")
+            ->assertStatus(403);
+
+        $this->assertDatabaseHas('projects', ['id' => $project->id]);
+    }
+
     public function test_personal_workspace_unaffected(): void
     {
         // Personal workspace — creator IS the workspace owner. The
@@ -205,6 +265,26 @@ class WorkspaceOwnerAccessTest extends TestCase
         ]);
 
         return [$owner, $workspace, $member];
+    }
+
+    /**
+     * Walk a user through 2FA enrol → confirm so the verification cache
+     * flag is set, satisfying the `2fa` middleware on destructive
+     * project routes (CLAUDE.md §7).
+     */
+    private function pass2fa(User $user): void
+    {
+        $enroll = $this->actingAs($user)->postJson('/api/v1/auth/2fa/enroll')->json();
+
+        $totp = app(TotpService::class);
+        $reflect = new \ReflectionClass($totp);
+        $method = $reflect->getMethod('generateCode');
+        $method->setAccessible(true);
+        $code = $method->invoke($totp, $enroll['secret'], intdiv(time(), TotpService::PERIOD));
+
+        $this->actingAs($user)
+            ->postJson('/api/v1/auth/2fa/confirm', ['code' => $code])
+            ->assertOk();
     }
 
     private function createProjectAs(User $creator, Organisation $workspace): Project
