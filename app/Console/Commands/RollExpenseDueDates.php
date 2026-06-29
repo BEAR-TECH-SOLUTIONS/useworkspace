@@ -29,6 +29,10 @@ class RollExpenseDueDates extends Command
             ->whereNotNull('next_due_date')
             ->where('next_due_date', '<', $today)
             ->where('billing_cycle', '!=', BillingCycle::OneTime->value)
+            // Auto-pay expenses are advanced by `expenses:auto-pay`, which
+            // records a payment for each elapsed cycle. Rolling their date
+            // forward here would skip those payments (#220).
+            ->where('auto_mark_paid', false)
             ->chunkById(500, function ($expenses) use (&$rolled, $today): void {
                 foreach ($expenses as $expense) {
                     $newDate = $this->advance($expense, $today);

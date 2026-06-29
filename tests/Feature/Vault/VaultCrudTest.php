@@ -28,7 +28,29 @@ class VaultCrudTest extends TestCase
             ->assertJsonPath('vault.is_default', false);
     }
 
-    public function test_default_vault_cannot_be_deleted(): void
+    public function test_deleting_default_vault_promotes_the_next_one(): void
+    {
+        $owner = UserFactory::create();
+        $project = ProjectFactory::forOwner($owner);
+        $default = Vault::query()->where('project_id', $project->id)->where('is_default', true)->firstOrFail();
+        $other = Vault::create([
+            'project_id' => $project->id,
+            'name' => 'Survivor',
+            'position' => 20000,
+            'is_default' => false,
+            'created_by' => $owner->id,
+        ]);
+
+        $this->actingAs($owner)
+            ->deleteJson("/api/v1/vaults/{$default->id}")
+            ->assertNoContent();
+
+        $this->assertDatabaseMissing('vaults', ['id' => $default->id]);
+        // The lowest-positioned survivor is promoted to default.
+        $this->assertTrue($other->refresh()->is_default);
+    }
+
+    public function test_deleting_the_last_vault_leaves_the_project_with_none(): void
     {
         $owner = UserFactory::create();
         $project = ProjectFactory::forOwner($owner);
@@ -36,7 +58,9 @@ class VaultCrudTest extends TestCase
 
         $this->actingAs($owner)
             ->deleteJson("/api/v1/vaults/{$default->id}")
-            ->assertStatus(422);
+            ->assertNoContent();
+
+        $this->assertSame(0, Vault::query()->where('project_id', $project->id)->count());
     }
 
     public function test_owner_can_delete_non_default_vault(): void

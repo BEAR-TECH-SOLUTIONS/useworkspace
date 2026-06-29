@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\PaymentType;
 use App\Enums\ResourceType;
+use App\Events\Project\BucketCreated;
+use App\Events\Project\BucketDeleted;
+use App\Events\Project\BucketUpdated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Expenses\StoreExpenseBucketRequest;
 use App\Http\Requests\Expenses\UpdateExpenseBucketRequest;
@@ -16,6 +19,7 @@ use App\Services\Permissions\PermissionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 
 class ExpenseBucketController extends Controller
 {
@@ -52,6 +56,8 @@ class ExpenseBucketController extends Controller
             'created_by' => $request->user()->id,
         ]);
 
+        BucketCreated::dispatch($bucket, $request->header('X-Socket-Id'));
+
         return response()->json([
             'bucket' => new ExpenseBucketResource($bucket),
         ], 201);
@@ -75,6 +81,7 @@ class ExpenseBucketController extends Controller
             foreach ($tokens as $token) {
                 if (strcasecmp($token, 'null') === 0) {
                     $includeNull = true;
+
                     continue;
                 }
                 if (PaymentType::tryFrom($token) !== null) {
@@ -134,7 +141,6 @@ class ExpenseBucketController extends Controller
         ));
     }
 
-
     public function update(UpdateExpenseBucketRequest $request, ExpenseBucket $expenseBucket): JsonResponse
     {
         $this->authorize('update', $expenseBucket);
@@ -147,8 +153,12 @@ class ExpenseBucketController extends Controller
 
         $expenseBucket->fill($payload)->save();
 
+        $expenseBucket->refresh();
+
+        BucketUpdated::dispatch($expenseBucket, $request->header('X-Socket-Id'));
+
         return response()->json([
-            'bucket' => new ExpenseBucketResource($expenseBucket->refresh()),
+            'bucket' => new ExpenseBucketResource($expenseBucket),
         ]);
     }
 
@@ -163,15 +173,41 @@ class ExpenseBucketController extends Controller
         ]);
     }
 
-    public function destroy(ExpenseBucket $expenseBucket): JsonResponse
+    public function destroy(Request $request, ExpenseBucket $expenseBucket): JsonResponse
     {
         $this->authorize('delete', $expenseBucket);
 
-        if ($expenseBucket->is_default) {
-            return response()->json(['message' => 'The default expense bucket cannot be deleted.'], 422);
-        }
+        $projectId = $expenseBucket->project_id;
+        $bucketId = $expenseBucket->id;
+        $wasDefault = $expenseBucket->is_default;
 
-        $expenseBucket->delete();
+        // Defaults are now deletable (#212). When the default is removed and
+        // other buckets remain, promote the oldest survivor so the project
+        // keeps a default; if none remain it legitimately has zero buckets.
+        $promoted = DB::transaction(function () use ($expenseBucket, $projectId, $wasDefault): ?ExpenseBucket {
+            $expenseBucket->delete();
+
+            if (! $wasDefault) {
+                return null;
+            }
+
+            $next = ExpenseBucket::query()
+                ->where('project_id', $projectId)
+                ->orderBy('id')
+                ->first();
+
+            $next?->update(['is_default' => true]);
+
+            return $next;
+        });
+
+        $socketId = $request->header('X-Socket-Id');
+
+        BucketDeleted::dispatch($projectId, $bucketId, $socketId);
+
+        if ($promoted !== null) {
+            BucketUpdated::dispatch($promoted, $socketId);
+        }
 
         return response()->json(status: 204);
     }

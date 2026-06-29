@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\ActivityAction;
 use App\Enums\BoardTemplate;
 use App\Enums\ResourceType;
+use App\Events\Project\BoardCreated;
+use App\Events\Project\BoardDeleted;
+use App\Events\Project\BoardUpdated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Tasks\ListArchivedTasksRequest;
 use App\Http\Requests\Tasks\StoreTaskBoardRequest;
@@ -79,8 +82,12 @@ class TaskBoardController extends Controller
             return $board;
         });
 
+        $board->load('columns');
+
+        BoardCreated::dispatch($board, $request->header('X-Socket-Id'));
+
         return response()->json([
-            'board' => new TaskBoardResource($board->load('columns')),
+            'board' => new TaskBoardResource($board),
         ], 201);
     }
 
@@ -141,8 +148,12 @@ class TaskBoardController extends Controller
             }
         });
 
+        $taskBoard->refresh();
+
+        BoardUpdated::dispatch($taskBoard, $request->header('X-Socket-Id'));
+
         return response()->json([
-            'board' => new TaskBoardResource($taskBoard->refresh()),
+            'board' => new TaskBoardResource($taskBoard),
         ]);
     }
 
@@ -220,15 +231,43 @@ class TaskBoardController extends Controller
         ]);
     }
 
-    public function destroy(TaskBoard $taskBoard): JsonResponse
+    public function destroy(Request $request, TaskBoard $taskBoard): JsonResponse
     {
         $this->authorize('delete', $taskBoard);
 
-        if ($taskBoard->is_default) {
-            return response()->json(['message' => 'The default board cannot be deleted.'], 422);
-        }
+        $projectId = $taskBoard->project_id;
+        $boardId = $taskBoard->id;
+        $wasDefault = $taskBoard->is_default;
 
-        $taskBoard->delete();
+        // Defaults are now deletable (#212). When the default is removed and
+        // other boards remain, promote the oldest survivor so the project
+        // keeps a default; if none remain the project legitimately has zero
+        // boards. The hard delete frees the partial unique index on
+        // (project_id) WHERE is_default before we set the new default.
+        $promoted = DB::transaction(function () use ($taskBoard, $projectId, $wasDefault): ?TaskBoard {
+            $taskBoard->delete();
+
+            if (! $wasDefault) {
+                return null;
+            }
+
+            $next = TaskBoard::query()
+                ->where('project_id', $projectId)
+                ->orderBy('id')
+                ->first();
+
+            $next?->update(['is_default' => true]);
+
+            return $next;
+        });
+
+        $socketId = $request->header('X-Socket-Id');
+
+        BoardDeleted::dispatch($projectId, $boardId, $socketId);
+
+        if ($promoted !== null) {
+            BoardUpdated::dispatch($promoted, $socketId);
+        }
 
         return response()->json(status: 204);
     }

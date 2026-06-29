@@ -32,6 +32,7 @@ class ExpenseResource extends JsonResource
             'payment_method_other' => $this->payment_method_other,
             'url' => $this->url,
             'next_due_date' => $this->next_due_date?->toDateString(),
+            'auto_mark_paid' => (bool) $this->auto_mark_paid,
             'created_by' => $this->created_by,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),

@@ -3,16 +3,22 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\ResourceType;
+use App\Enums\TaskResourceLinkKind;
+use App\Events\Project\DocCreated;
+use App\Events\Project\DocDeleted;
+use App\Events\Project\DocUpdated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Docs\StoreDocRequest;
 use App\Http\Requests\Docs\UpdateDocRequest;
 use App\Http\Resources\Docs\DocResource;
 use App\Models\Docs\Doc;
 use App\Models\Project\Project;
+use App\Models\Tasks\TaskResourceLink;
 use App\Services\Docs\DocContentTextExtractor;
 use App\Services\Permissions\PermissionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class DocController extends Controller
 {
@@ -73,6 +79,8 @@ class DocController extends Controller
             'updated_by' => $user->id,
         ]);
 
+        DocCreated::dispatch($doc, $request->header('X-Socket-Id'));
+
         return response()->json([
             'doc' => new DocResource($doc),
         ], 201);
@@ -108,8 +116,12 @@ class DocController extends Controller
 
         $doc->fill($payload)->save();
 
+        $doc->refresh();
+
+        DocUpdated::dispatch($doc, $request->header('X-Socket-Id'));
+
         return response()->json([
-            'doc' => new DocResource($doc->refresh()),
+            'doc' => new DocResource($doc),
         ]);
     }
 
@@ -127,11 +139,14 @@ class DocController extends Controller
         ]);
     }
 
-    public function destroy(Doc $doc): JsonResponse
+    public function destroy(Request $request, Doc $doc): JsonResponse
     {
         $this->authorize('delete', $doc);
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($doc): void {
+        $projectId = $doc->project_id;
+        $docId = $doc->id;
+
+        DB::transaction(function () use ($doc): void {
             // task_resource_links stores (resource_type, resource_id)
             // polymorphically with no FK, so a dropped doc would
             // otherwise leave orphan "locked" placeholders on tasks
@@ -139,13 +154,15 @@ class DocController extends Controller
             // transaction as the doc delete — the spec calls for
             // either ON DELETE CASCADE (impossible with polymorphic
             // FKs) or explicit cleanup.
-            \App\Models\Tasks\TaskResourceLink::query()
-                ->where('resource_type', \App\Enums\TaskResourceLinkKind::Doc->value)
+            TaskResourceLink::query()
+                ->where('resource_type', TaskResourceLinkKind::Doc->value)
                 ->where('resource_id', $doc->id)
                 ->delete();
 
             $doc->delete();
         });
+
+        DocDeleted::dispatch($projectId, $docId, $request->header('X-Socket-Id'));
 
         return response()->json(status: 204);
     }

@@ -14,24 +14,25 @@ use App\Http\Controllers\Api\V1\BoardMemberController;
 use App\Http\Controllers\Api\V1\BootstrapController;
 use App\Http\Controllers\Api\V1\BucketMemberController;
 use App\Http\Controllers\Api\V1\CredentialByUrlController;
+use App\Http\Controllers\Api\V1\CredentialController;
 use App\Http\Controllers\Api\V1\DeferredAccessController;
 use App\Http\Controllers\Api\V1\DocController;
 use App\Http\Controllers\Api\V1\DocMemberController;
-use App\Http\Controllers\Api\V1\CredentialController;
 use App\Http\Controllers\Api\V1\ExpenseAnalyticsController;
 use App\Http\Controllers\Api\V1\ExpenseBucketController;
 use App\Http\Controllers\Api\V1\ExpenseController;
 use App\Http\Controllers\Api\V1\ExpensePaymentController;
 use App\Http\Controllers\Api\V1\LinkedTasksController;
-use App\Http\Controllers\Api\V1\TaskResourceLinkController;
 use App\Http\Controllers\Api\V1\MeAccessController;
+use App\Http\Controllers\Api\V1\MeTelegramController;
+use App\Http\Controllers\Api\V1\MeWorkspaceInvitationController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\ProjectDashboardController;
-use App\Http\Controllers\Api\V1\ProjectSearchController;
-use App\Http\Controllers\Api\V1\ServerAttestController;
 use App\Http\Controllers\Api\V1\ProjectMemberController;
+use App\Http\Controllers\Api\V1\ProjectSearchController;
 use App\Http\Controllers\Api\V1\PublicShareLinkController;
+use App\Http\Controllers\Api\V1\ServerAttestController;
 use App\Http\Controllers\Api\V1\ShareLinkController;
 use App\Http\Controllers\Api\V1\ShareLinkNavigationController;
 use App\Http\Controllers\Api\V1\TaskActivityController;
@@ -42,12 +43,13 @@ use App\Http\Controllers\Api\V1\TaskColumnController;
 use App\Http\Controllers\Api\V1\TaskCommentController;
 use App\Http\Controllers\Api\V1\TaskItemController;
 use App\Http\Controllers\Api\V1\TaskLabelController;
+use App\Http\Controllers\Api\V1\TaskResourceLinkController;
+use App\Http\Controllers\Api\V1\TelegramWebhookController;
 use App\Http\Controllers\Api\V1\UserPublicKeyController;
 use App\Http\Controllers\Api\V1\VaultController;
 use App\Http\Controllers\Api\V1\VaultKeyController;
 use App\Http\Controllers\Api\V1\VaultMemberController;
 use App\Http\Controllers\Api\V1\WaitlistController;
-use App\Http\Controllers\Api\V1\MeWorkspaceInvitationController;
 use App\Http\Controllers\Api\V1\WorkspaceBillingController;
 use App\Http\Controllers\Api\V1\WorkspaceController;
 use App\Http\Controllers\Api\V1\WorkspaceInvitationController;
@@ -70,6 +72,12 @@ Route::prefix('v1')->group(function (): void {
     // in the controller once Stripe is wired. Stubbed 501 for now.
     Route::post('/billing/webhook', [WorkspaceBillingController::class, 'webhook']);
 
+    // Telegram bot webhook — unauthenticated; the request is authenticated
+    // by the secret token Telegram echoes in the X-Telegram-Bot-Api-Secret-Token
+    // header (verified in the controller against services.telegram.webhook_secret).
+    Route::post('/telegram/webhook', [TelegramWebhookController::class, 'handle'])
+        ->middleware('throttle:120,1');
+
     // Anti-phishing identity probe — self-hosted installs only.
     // Returns a cloud-signed attestation envelope (proves the install
     // is licensed) plus the supplied nonce signed by the install's
@@ -86,7 +94,6 @@ Route::prefix('v1')->group(function (): void {
     // WaitlistController docblock for the spam-protection layers.
     Route::post('/waitlist', [WaitlistController::class, 'store'])
         ->middleware('throttle:waitlist');
-
 
     // Public share-link endpoints (CLAUDE §10 + Universal Share Links plan).
     // Both GET and POST get a per-IP + per-token throttle (audit M5) —
@@ -107,6 +114,13 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/logout', LogoutController::class);
         Route::get('/auth/me', [MeController::class, 'show']);
         Route::patch('/auth/me', [MeController::class, 'update']);
+
+        // Telegram notification channel (#213B). Linking + preferences;
+        // available without a master password since it touches no vault data.
+        Route::get('/me/telegram', [MeTelegramController::class, 'show']);
+        Route::post('/me/telegram/link', [MeTelegramController::class, 'link']);
+        Route::delete('/me/telegram', [MeTelegramController::class, 'destroy']);
+        Route::put('/me/telegram/preferences', [MeTelegramController::class, 'updatePreferences']);
 
         // Active-session token rotation. Refresh only succeeds inside
         // the last third of the token's TTL (server enforces) so a

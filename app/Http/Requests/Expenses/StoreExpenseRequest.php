@@ -31,6 +31,10 @@ class StoreExpenseRequest extends FormRequest
             'vendor' => ['nullable', 'string', 'max:200'],
             'next_due_date' => ['nullable', 'date_format:Y-m-d'],
 
+            // Auto-mark-paid: only honoured for recurring cycles; the
+            // controller coerces it to false for one-time expenses.
+            'auto_mark_paid' => ['sometimes', 'boolean'],
+
             // Payment-method block. The `payment_type='other' ↔
             // payment_method_other set` invariant is enforced in
             // withValidator() rather than via dependency rules, so the

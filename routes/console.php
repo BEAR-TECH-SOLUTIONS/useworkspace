@@ -8,6 +8,11 @@ Schedule::command('shares:auto-revoke-stale')->weeklyOn(1, '04:00');
 Schedule::command('tasks:auto-archive')->hourlyAt(15);
 Schedule::command('expenses:roll-due-dates')->hourlyAt(45);
 
+// Auto-mark-paid recurring expenses: record a payment for each elapsed
+// cycle and advance the due date. Runs before the daily notification
+// sweeps so an auto-paid expense isn't also flagged overdue (#220/#213).
+Schedule::command('expenses:auto-pay')->dailyAt('06:00');
+
 // Daily FX rate refresh. One upstream call to exchangeratesapi.io
 // produces the full cross-rate matrix for every supported currency
 // pair, cached for 25 hours so reads survive small clock skew on
@@ -19,6 +24,9 @@ Schedule::command('fx:fetch')->dailyAt('02:30');
 Schedule::command('notifications:task-due-soon')->dailyAt('08:00');
 Schedule::command('notifications:task-overdue')->dailyAt('08:10');
 Schedule::command('notifications:expense-due-soon')->dailyAt('08:20');
+// Runs after expenses:auto-pay (06:00) so auto-settled expenses are
+// already paid and never flagged overdue (#213A).
+Schedule::command('notifications:expense-overdue')->dailyAt('08:25');
 Schedule::command('notifications:cleanup')->dailyAt('03:00');
 
 // Purge expired 2FA login challenges — lightweight inline closure

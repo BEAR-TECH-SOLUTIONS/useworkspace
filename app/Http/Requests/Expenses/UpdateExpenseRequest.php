@@ -34,6 +34,10 @@ class UpdateExpenseRequest extends FormRequest
             'vendor' => ['sometimes', 'nullable', 'string', 'max:200'],
             'next_due_date' => ['sometimes', 'nullable', 'date_format:Y-m-d'],
 
+            // Auto-mark-paid: only honoured for recurring cycles; the
+            // controller coerces it to false for one-time expenses.
+            'auto_mark_paid' => ['sometimes', 'boolean'],
+
             'payment_type' => ['sometimes', 'nullable', Rule::enum(PaymentType::class)],
             'payment_method_other' => ['sometimes', 'nullable', 'string', 'max:120'],
 

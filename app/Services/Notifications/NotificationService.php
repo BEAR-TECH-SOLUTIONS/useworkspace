@@ -4,6 +4,7 @@ namespace App\Services\Notifications;
 
 use App\Enums\NotificationType;
 use App\Events\NotificationCreated;
+use App\Jobs\SendTelegramNotification;
 use App\Models\Expenses\Expense;
 use App\Models\Expenses\ExpenseBucket;
 use App\Models\Identity\Organisation;
@@ -75,6 +76,14 @@ class NotificationService
         ]);
 
         NotificationCreated::dispatch($notification);
+
+        // Mirror to Telegram when the recipient has linked a chat and
+        // opted this type in (#213B). Queued + non-fatal: a delivery
+        // failure never blocks the in-app notification above.
+        $recipient = User::find($userId);
+        if ($recipient !== null && $recipient->telegramWantsType($type->value)) {
+            SendTelegramNotification::dispatch($notification->id);
+        }
 
         return $notification;
     }
@@ -298,6 +307,34 @@ class NotificationService
 
         return [
             'title' => '"'.$expense->name.'" is due '.$relative,
+            'body' => $body,
+            'workspace' => $workspace,
+            'project' => $project,
+        ];
+    }
+
+    /**
+     * Overdue variant of expenseDueContext: the title is framed around
+     * the missed cycle's due date rather than the upcoming one.
+     *
+     * @return array{title:string, body:string, workspace:?Organisation, project:?Project}
+     */
+    public function expenseOverdueContext(Expense $expense, Carbon $dueDate, Carbon $now): array
+    {
+        $project = Project::query()->whereKey($expense->project_id)->first();
+        $workspace = $project !== null
+            ? Organisation::query()->whereKey($project->organisation_id)->first()
+            : null;
+
+        $relative = $this->relativeDate($dueDate, $now);
+
+        $body = number_format((float) $expense->amount, 2).' '.$expense->currency;
+        if (! empty($expense->vendor)) {
+            $body .= ' · '.$expense->vendor;
+        }
+
+        return [
+            'title' => '"'.$expense->name.'" payment is overdue (was due '.$relative.')',
             'body' => $body,
             'workspace' => $workspace,
             'project' => $project,

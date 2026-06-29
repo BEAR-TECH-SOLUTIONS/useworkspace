@@ -151,6 +151,14 @@ class ExpenseController extends Controller
             ? PaymentType::from($request->string('payment_type')->toString())
             : null;
 
+        $billingCycle = BillingCycle::from($request->string('billing_cycle')->toString());
+
+        // Auto-mark-paid only makes sense for recurring expenses; coerce it
+        // to false for one-time ones so the auto-pay command never sees an
+        // impossible row (#220).
+        $autoMarkPaid = $billingCycle !== BillingCycle::OneTime
+            && $request->boolean('auto_mark_paid');
+
         $expense = Expense::create([
             'project_id' => $project->id,
             'bucket_id' => $bucket->id,
@@ -159,7 +167,7 @@ class ExpenseController extends Controller
             'category' => ExpenseCategory::from($request->string('category')->toString()),
             'amount' => $request->input('amount'),
             'currency' => strtoupper($request->string('currency')->toString()),
-            'billing_cycle' => BillingCycle::from($request->string('billing_cycle')->toString()),
+            'billing_cycle' => $billingCycle,
             'vendor' => $request->input('vendor'),
             'tags' => $request->input('tags', []),
             'payment_type' => $paymentType,
@@ -168,6 +176,7 @@ class ExpenseController extends Controller
                 : null,
             'url' => $request->input('url'),
             'next_due_date' => $request->input('next_due_date'),
+            'auto_mark_paid' => $autoMarkPaid,
             'created_by' => $request->user()->id,
         ]);
 
@@ -216,6 +225,20 @@ class ExpenseController extends Controller
 
         if (isset($payload['currency'])) {
             $payload['currency'] = strtoupper($payload['currency']);
+        }
+
+        // Auto-mark-paid coercion (#220). The effective cycle is the one in
+        // this PATCH if present, else the existing one. The flag may only be
+        // true for recurring expenses, so: an explicit value is ANDed with
+        // "is recurring", and switching an auto-pay expense to one-time
+        // silently drops the flag even when the request didn't mention it.
+        $effectiveCycle = $payload['billing_cycle'] ?? $expense->billing_cycle?->value;
+        $isRecurring = $effectiveCycle !== BillingCycle::OneTime->value;
+
+        if ($request->has('auto_mark_paid')) {
+            $payload['auto_mark_paid'] = $isRecurring && $request->boolean('auto_mark_paid');
+        } elseif (! $isRecurring && $expense->auto_mark_paid) {
+            $payload['auto_mark_paid'] = false;
         }
 
         $previousType = $expense->payment_type;

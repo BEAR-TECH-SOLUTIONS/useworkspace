@@ -28,6 +28,9 @@ class User extends Authenticatable
         'last_totp_step',
         'two_factor_failed_attempts',
         'two_factor_locked_until',
+        'telegram_chat_id',
+        'telegram_link_code',
+        'telegram_link_code_expires_at',
     ];
 
     public function getAuthPassword(): string
@@ -66,7 +69,33 @@ class User extends Authenticatable
             'two_factor_failed_attempts' => 'integer',
             'two_factor_locked_until' => 'immutable_datetime',
             'is_admin' => 'bool',
+            'telegram_linked_at' => 'immutable_datetime',
+            'telegram_link_code_expires_at' => 'immutable_datetime',
+            'telegram_notification_prefs' => 'array',
         ];
+    }
+
+    /**
+     * True when the user has bound a Telegram chat to their account.
+     */
+    public function telegramLinked(): bool
+    {
+        return $this->telegram_chat_id !== null;
+    }
+
+    /**
+     * Whether a notification of $type should be mirrored to Telegram.
+     * NULL prefs means "all types"; an array is an explicit allow-list.
+     */
+    public function telegramWantsType(string $type): bool
+    {
+        if (! $this->telegramLinked()) {
+            return false;
+        }
+
+        $prefs = $this->telegram_notification_prefs;
+
+        return $prefs === null || in_array($type, $prefs, true);
     }
 
     public function organisations(): HasMany

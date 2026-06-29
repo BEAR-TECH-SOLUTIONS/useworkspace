@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\ResourceType;
+use App\Events\Project\VaultCreated;
+use App\Events\Project\VaultDeleted;
+use App\Events\Project\VaultUpdated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Vault\StoreVaultRequest;
 use App\Http\Requests\Vault\UpdateVaultRequest;
@@ -14,6 +17,7 @@ use App\Services\Permissions\PermissionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 
 class VaultController extends Controller
 {
@@ -55,6 +59,11 @@ class VaultController extends Controller
 
         $this->attachWrappedKeys($request->user(), [$vault]);
 
+        // VaultCreated nulls my_wrapped_key on the wire (the shared channel
+        // can't personalise per recipient); the actor still gets its key via
+        // this HTTP response and is excluded from the broadcast by socket id.
+        VaultCreated::dispatch($vault, $request->header('X-Socket-Id'));
+
         return response()->json([
             'vault' => new VaultResource($vault),
         ], 201);
@@ -80,6 +89,8 @@ class VaultController extends Controller
         $fresh = $vault->refresh();
         $this->attachWrappedKeys($request->user(), [$fresh]);
 
+        VaultUpdated::dispatch($fresh, $request->header('X-Socket-Id'));
+
         return response()->json([
             'vault' => new VaultResource($fresh),
         ]);
@@ -99,15 +110,44 @@ class VaultController extends Controller
         ]);
     }
 
-    public function destroy(Vault $vault): JsonResponse
+    public function destroy(Request $request, Vault $vault): JsonResponse
     {
         $this->authorize('delete', $vault);
 
-        if ($vault->is_default) {
-            return response()->json(['message' => 'The default vault cannot be deleted.'], 422);
-        }
+        $projectId = $vault->project_id;
+        $vaultId = $vault->id;
+        $wasDefault = $vault->is_default;
 
-        $vault->delete();
+        // Defaults are now deletable (#212). Credentials in the deleted vault
+        // are reassigned to "All entries" (vault_id → NULL) by the FK, the
+        // same as for any vault. When the default is removed and others
+        // remain, promote the lowest-positioned survivor so the project keeps
+        // a default; if none remain it legitimately has zero vaults.
+        $promoted = DB::transaction(function () use ($vault, $projectId, $wasDefault): ?Vault {
+            $vault->delete();
+
+            if (! $wasDefault) {
+                return null;
+            }
+
+            $next = Vault::query()
+                ->where('project_id', $projectId)
+                ->orderBy('position')
+                ->orderBy('id')
+                ->first();
+
+            $next?->update(['is_default' => true]);
+
+            return $next;
+        });
+
+        $socketId = $request->header('X-Socket-Id');
+
+        VaultDeleted::dispatch($projectId, $vaultId, $socketId);
+
+        if ($promoted !== null) {
+            VaultUpdated::dispatch($promoted, $socketId);
+        }
 
         return response()->json(status: 204);
     }

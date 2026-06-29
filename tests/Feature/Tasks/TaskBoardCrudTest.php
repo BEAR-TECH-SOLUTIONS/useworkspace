@@ -108,7 +108,28 @@ class TaskBoardCrudTest extends TestCase
         ]);
     }
 
-    public function test_default_board_cannot_be_deleted(): void
+    public function test_deleting_default_board_promotes_the_next_one(): void
+    {
+        $owner = UserFactory::create();
+        $project = ProjectFactory::forOwner($owner);
+        $defaultBoard = TaskBoard::query()->where('project_id', $project->id)->where('is_default', true)->firstOrFail();
+        $other = TaskBoard::create([
+            'project_id' => $project->id,
+            'name' => 'Survivor',
+            'is_default' => false,
+            'created_by' => $owner->id,
+        ]);
+
+        $this->actingAs($owner)
+            ->deleteJson("/api/v1/task-boards/{$defaultBoard->id}")
+            ->assertNoContent();
+
+        $this->assertDatabaseMissing('task_boards', ['id' => $defaultBoard->id]);
+        // The oldest survivor is promoted to default.
+        $this->assertTrue($other->refresh()->is_default);
+    }
+
+    public function test_deleting_the_last_board_leaves_the_project_with_none(): void
     {
         $owner = UserFactory::create();
         $project = ProjectFactory::forOwner($owner);
@@ -116,7 +137,9 @@ class TaskBoardCrudTest extends TestCase
 
         $this->actingAs($owner)
             ->deleteJson("/api/v1/task-boards/{$defaultBoard->id}")
-            ->assertStatus(422);
+            ->assertNoContent();
+
+        $this->assertSame(0, TaskBoard::query()->where('project_id', $project->id)->count());
     }
 
     public function test_show_hydrates_task_relations_without_n_plus_one(): void

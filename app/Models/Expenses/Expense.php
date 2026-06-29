@@ -22,6 +22,7 @@ class Expense extends Model
         'amount' => 'decimal:2',
         'tags' => 'array',
         'next_due_date' => 'immutable_date',
+        'auto_mark_paid' => 'bool',
         'created_at' => 'immutable_datetime',
         'updated_at' => 'immutable_datetime',
     ];

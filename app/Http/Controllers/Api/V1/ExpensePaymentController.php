@@ -9,6 +9,7 @@ use App\Http\Resources\Expenses\ExpensePaymentResource;
 use App\Http\Resources\Expenses\ExpenseResource;
 use App\Models\Expenses\Expense;
 use App\Models\Expenses\ExpensePayment;
+use App\Services\Expenses\ExpensePaymentService;
 use App\Services\Permissions\Abilities;
 use App\Services\Permissions\PermissionService;
 use Illuminate\Http\JsonResponse;
@@ -24,7 +25,10 @@ use Illuminate\Support\Facades\DB;
  */
 class ExpensePaymentController extends Controller
 {
-    public function __construct(private readonly PermissionService $perms) {}
+    public function __construct(
+        private readonly PermissionService $perms,
+        private readonly ExpensePaymentService $payments,
+    ) {}
 
     /**
      * POST /expenses/{expense}/pay — mark as paid.
@@ -55,29 +59,15 @@ class ExpensePaymentController extends Controller
             ? (float) $request->input('amount')
             : (float) $expense->amount;
 
-        [$expense, $payment] = DB::transaction(function () use ($expense, $cycle, $paidAt, $amount, $user, $request): array {
-            $payment = ExpensePayment::create([
-                'expense_id' => $expense->id,
-                'paid_at' => $paidAt->toDateString(),
-                'amount' => $amount,
-                'currency' => $expense->currency,
-                'note' => $request->input('note'),
-                'created_by' => $user->id,
-            ]);
-
-            // Advance from the old next_due_date (spec §2 bullet 4:
-            // prevents drift on late payments).
-            $currentDue = $expense->next_due_date !== null
-                ? Carbon::parse($expense->next_due_date)
-                : null;
-
-            $newDue = $currentDue !== null ? $cycle->advance($currentDue) : null;
-
-            $expense->next_due_date = $newDue?->toDateString();
-            $expense->save();
-
-            return [$expense->refresh(), $payment];
-        });
+        // Record + advance is shared with the auto-pay command via the
+        // service so both paths stay byte-for-byte consistent.
+        [$expense, $payment] = $this->payments->record(
+            $expense,
+            $paidAt,
+            $amount,
+            $request->input('note'),
+            $user->id,
+        );
 
         return response()->json([
             'expense' => new ExpenseResource($expense),

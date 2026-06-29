@@ -30,7 +30,29 @@ class ExpenseBucketCrudTest extends TestCase
             ->assertJsonPath('bucket.is_default', false);
     }
 
-    public function test_default_bucket_cannot_be_deleted(): void
+    public function test_deleting_default_bucket_promotes_the_next_one(): void
+    {
+        $owner = UserFactory::create();
+        $project = ProjectFactory::forOwner($owner);
+        $default = ExpenseBucket::query()->where('project_id', $project->id)->where('is_default', true)->firstOrFail();
+        $other = ExpenseBucket::create([
+            'project_id' => $project->id,
+            'name' => 'Survivor',
+            'currency' => 'USD',
+            'is_default' => false,
+            'created_by' => $owner->id,
+        ]);
+
+        $this->actingAs($owner)
+            ->deleteJson("/api/v1/expense-buckets/{$default->id}")
+            ->assertNoContent();
+
+        $this->assertDatabaseMissing('expense_buckets', ['id' => $default->id]);
+        // The oldest survivor is promoted to default.
+        $this->assertTrue($other->refresh()->is_default);
+    }
+
+    public function test_deleting_the_last_bucket_leaves_the_project_with_none(): void
     {
         $owner = UserFactory::create();
         $project = ProjectFactory::forOwner($owner);
@@ -38,7 +60,9 @@ class ExpenseBucketCrudTest extends TestCase
 
         $this->actingAs($owner)
             ->deleteJson("/api/v1/expense-buckets/{$default->id}")
-            ->assertStatus(422);
+            ->assertNoContent();
+
+        $this->assertSame(0, ExpenseBucket::query()->where('project_id', $project->id)->count());
     }
 
     public function test_owner_can_delete_non_default_bucket(): void

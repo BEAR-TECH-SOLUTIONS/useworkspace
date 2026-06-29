@@ -10,6 +10,7 @@ enum NotificationType: string
     case TaskDueSoon = 'task_due_soon';
     case TaskOverdue = 'task_overdue';
     case ExpenseDueSoon = 'expense_due_soon';
+    case ExpenseOverdue = 'expense_overdue';
     case InvitationReceived = 'invitation_received';
     case MemberRemoved = 'member_removed';
     case UserReadyForAccess = 'user_ready_for_access';
