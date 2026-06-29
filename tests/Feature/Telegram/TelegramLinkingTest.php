@@ -18,7 +18,10 @@ class TelegramLinkingTest extends TestCase
 
         config([
             'services.telegram.bot_username' => 'useworkbot',
-            'services.telegram.webhook_secret' => 'hook-secret',
+            // No webhook secret by default — the webhook works without one
+            // (the pairing code is the security boundary). The
+            // optional-secret enforcement is covered separately below.
+            'services.telegram.webhook_secret' => null,
             // No bot_token: outbound sends no-op, so the confirmation
             // message in the webhook handler doesn't hit the network.
             'services.telegram.bot_token' => null,
@@ -44,16 +47,16 @@ class TelegramLinkingTest extends TestCase
         $user = UserFactory::create();
         $code = $this->actingAs($user)->postJson('/api/v1/me/telegram/link')->json('code');
 
-        $this->withHeaders(['X-Telegram-Bot-Api-Secret-Token' => 'hook-secret'])
-            ->postJson('/api/v1/telegram/webhook', [
-                'update_id' => 1,
-                'message' => [
-                    'message_id' => 10,
-                    'from' => ['id' => 555, 'username' => 'janedoe'],
-                    'chat' => ['id' => 555, 'type' => 'private'],
-                    'text' => "/start {$code}",
-                ],
-            ])
+        // No secret configured → no header needed.
+        $this->postJson('/api/v1/telegram/webhook', [
+            'update_id' => 1,
+            'message' => [
+                'message_id' => 10,
+                'from' => ['id' => 555, 'username' => 'janedoe'],
+                'chat' => ['id' => 555, 'type' => 'private'],
+                'text' => "/start {$code}",
+            ],
+        ])
             ->assertOk()
             ->assertJson(['ok' => true]);
 
@@ -65,11 +68,30 @@ class TelegramLinkingTest extends TestCase
         $this->assertNull($user->telegram_link_code);
     }
 
-    public function test_webhook_rejects_wrong_secret(): void
+    public function test_webhook_rejects_wrong_secret_when_one_is_configured(): void
     {
+        // Opt into the optional header check for this test only.
+        config(['services.telegram.webhook_secret' => 'hook-secret']);
+
         $this->withHeaders(['X-Telegram-Bot-Api-Secret-Token' => 'wrong'])
             ->postJson('/api/v1/telegram/webhook', ['message' => ['chat' => ['id' => 1], 'text' => '/start x']])
             ->assertForbidden();
+    }
+
+    public function test_webhook_accepts_correct_secret_when_configured(): void
+    {
+        config(['services.telegram.webhook_secret' => 'hook-secret']);
+
+        $user = UserFactory::create();
+        $code = $this->actingAs($user)->postJson('/api/v1/me/telegram/link')->json('code');
+
+        $this->withHeaders(['X-Telegram-Bot-Api-Secret-Token' => 'hook-secret'])
+            ->postJson('/api/v1/telegram/webhook', [
+                'message' => ['chat' => ['id' => 321], 'text' => "/start {$code}"],
+            ])
+            ->assertOk();
+
+        $this->assertTrue($user->refresh()->telegramLinked());
     }
 
     public function test_webhook_ignores_expired_code(): void
@@ -80,10 +102,9 @@ class TelegramLinkingTest extends TestCase
             'telegram_link_code_expires_at' => Carbon::now()->subMinute(),
         ])->save();
 
-        $this->withHeaders(['X-Telegram-Bot-Api-Secret-Token' => 'hook-secret'])
-            ->postJson('/api/v1/telegram/webhook', [
-                'message' => ['chat' => ['id' => 999], 'text' => '/start stalecode'],
-            ])
+        $this->postJson('/api/v1/telegram/webhook', [
+            'message' => ['chat' => ['id' => 999], 'text' => '/start stalecode'],
+        ])
             ->assertOk();
 
         $this->assertFalse($user->refresh()->telegramLinked());

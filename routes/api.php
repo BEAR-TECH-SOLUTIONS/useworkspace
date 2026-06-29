@@ -72,9 +72,9 @@ Route::prefix('v1')->group(function (): void {
     // in the controller once Stripe is wired. Stubbed 501 for now.
     Route::post('/billing/webhook', [WorkspaceBillingController::class, 'webhook']);
 
-    // Telegram bot webhook — unauthenticated; the request is authenticated
-    // by the secret token Telegram echoes in the X-Telegram-Bot-Api-Secret-Token
-    // header (verified in the controller against services.telegram.webhook_secret).
+    // Telegram bot webhook — unauthenticated. The pairing code carried in
+    // /start <code> is the security boundary; an optional webhook secret
+    // (services.telegram.webhook_secret) adds a header check when set.
     Route::post('/telegram/webhook', [TelegramWebhookController::class, 'handle'])
         ->middleware('throttle:120,1');
 

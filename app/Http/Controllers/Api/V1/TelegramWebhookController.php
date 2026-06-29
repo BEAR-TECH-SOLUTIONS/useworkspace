@@ -12,10 +12,13 @@ use Illuminate\Http\Request;
  * act on the `/start <code>` deep-link command, which binds the sending
  * chat to the user that owns the pairing code.
  *
- * Authenticity is established by the secret token Telegram echoes in the
- * X-Telegram-Bot-Api-Secret-Token header (configured when the webhook is
- * registered). With no secret configured the endpoint refuses every
- * request — the feature stays dark until a bot is provisioned.
+ * Webhook authenticity is optional defense-in-depth: if
+ * `services.telegram.webhook_secret` is set, the secret token Telegram
+ * echoes in the X-Telegram-Bot-Api-Secret-Token header must match;
+ * otherwise the call is accepted. The real security boundary is the
+ * pairing code itself — a single-use, 15-minute, 32-char random token
+ * that only the legitimate user holds, so a spoofed webhook with an
+ * unknown code binds nothing.
  */
 class TelegramWebhookController extends Controller
 {
@@ -23,8 +26,10 @@ class TelegramWebhookController extends Controller
 
     public function handle(Request $request): JsonResponse
     {
+        // Verify the secret token only when one is configured; it's an
+        // optional extra check on top of the pairing-code secrecy.
         $secret = (string) config('services.telegram.webhook_secret');
-        if ($secret === '' || ! hash_equals($secret, (string) $request->header('X-Telegram-Bot-Api-Secret-Token'))) {
+        if ($secret !== '' && ! hash_equals($secret, (string) $request->header('X-Telegram-Bot-Api-Secret-Token'))) {
             return response()->json(['ok' => false], 403);
         }
 

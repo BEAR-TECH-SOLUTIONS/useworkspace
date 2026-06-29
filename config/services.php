@@ -38,8 +38,10 @@ return [
     // Telegram notification mirror (#213B). With no bot token configured
     // the transport is inert: linking still works for the deep-link/code
     // flow but outbound sends no-op + log, so the feature ships dark until
-    // a bot is provisioned. `webhook_secret` is checked against the
-    // X-Telegram-Bot-Api-Secret-Token header on the public webhook.
+    // a bot is provisioned. `webhook_secret` is OPTIONAL — when set it's
+    // checked against the X-Telegram-Bot-Api-Secret-Token header as
+    // defense-in-depth; when unset the webhook relies on the pairing
+    // code's secrecy alone.
     'telegram' => [
         'bot_token' => env('TELEGRAM_BOT_TOKEN'),
         'bot_username' => env('TELEGRAM_BOT_USERNAME'),
