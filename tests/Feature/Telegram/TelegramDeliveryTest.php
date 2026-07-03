@@ -9,21 +9,21 @@ use App\Models\User;
 use App\Services\Notifications\NotificationService;
 use App\Services\Telegram\TelegramService;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Queue;
 use Tests\Support\UserFactory;
 use Tests\TestCase;
 
 /**
- * #213B — outbound delivery: a created notification enqueues a Telegram
- * send for a linked + opted-in recipient, and the transport is inert
- * without a bot token.
+ * #213B — outbound delivery: a created notification dispatches a Telegram
+ * send (after the response) for a linked + opted-in recipient, and the
+ * transport is inert without a bot token.
  */
 class TelegramDeliveryTest extends TestCase
 {
-    public function test_created_notification_enqueues_send_for_linked_user(): void
+    public function test_created_notification_dispatches_send_for_linked_user(): void
     {
-        Queue::fake();
+        Bus::fake();
         $user = $this->linkedUser();
 
         $notification = app(NotificationService::class)->create(
@@ -32,7 +32,7 @@ class TelegramDeliveryTest extends TestCase
             title: 'You were assigned a task',
         );
 
-        Queue::assertPushed(
+        Bus::assertDispatchedAfterResponse(
             SendTelegramNotification::class,
             fn (SendTelegramNotification $job): bool => $job->notificationId === $notification->id,
         );
@@ -40,7 +40,7 @@ class TelegramDeliveryTest extends TestCase
 
     public function test_no_send_for_unlinked_user(): void
     {
-        Queue::fake();
+        Bus::fake();
         $user = UserFactory::create();
 
         app(NotificationService::class)->create(
@@ -49,12 +49,12 @@ class TelegramDeliveryTest extends TestCase
             title: 'You were assigned a task',
         );
 
-        Queue::assertNotPushed(SendTelegramNotification::class);
+        Bus::assertNotDispatchedAfterResponse(SendTelegramNotification::class);
     }
 
     public function test_no_send_when_type_not_in_allowlist(): void
     {
-        Queue::fake();
+        Bus::fake();
         $user = $this->linkedUser(['expense_overdue']);
 
         app(NotificationService::class)->create(
@@ -63,7 +63,7 @@ class TelegramDeliveryTest extends TestCase
             title: 'Different type',
         );
 
-        Queue::assertNotPushed(SendTelegramNotification::class);
+        Bus::assertNotDispatchedAfterResponse(SendTelegramNotification::class);
     }
 
     public function test_job_sends_message_via_telegram_api(): void

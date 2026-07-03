@@ -55,8 +55,13 @@ class TelegramWebhookController extends Controller
         $user = $this->telegram->bindFromStartCommand($code, (string) $chatId, $username);
 
         if ($user !== null) {
-            // Best-effort confirmation back to the chat; non-fatal if it fails.
-            $this->telegram->send((string) $chatId, 'Your Telegram account is now linked to usework.space.');
+            // Best-effort confirmation back to the chat; the bind already
+            // persisted, so never let a send error fail the webhook.
+            try {
+                $this->telegram->send((string) $chatId, 'Your Telegram account is now linked to usework.space.');
+            } catch (\Throwable $e) {
+                report($e);
+            }
         }
 
         return response()->json(['ok' => true]);

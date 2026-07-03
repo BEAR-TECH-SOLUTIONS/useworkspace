@@ -127,10 +127,14 @@ class TelegramService
         $url = rtrim((string) config('services.telegram.api_url'), '/')
             .'/bot'.$this->token().'/sendMessage';
 
-        return $this->http->asForm()->post($url, [
-            'chat_id' => $chatId,
-            'text' => $text,
-        ])->throw()->successful();
+        return $this->http
+            ->connectTimeout(5)
+            ->timeout(10)
+            ->asForm()
+            ->post($url, [
+                'chat_id' => $chatId,
+                'text' => $text,
+            ])->throw()->successful();
     }
 
     private function token(): string

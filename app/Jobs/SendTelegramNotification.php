@@ -6,36 +6,29 @@ use App\Enums\NotificationType;
 use App\Models\Notification;
 use App\Models\User;
 use App\Services\Telegram\TelegramService;
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Throwable;
 
 /**
  * Mirror a created notification to the recipient's linked Telegram chat
- * (#213B). Queued and retried; a failure here never affects the in-app
- * notification, which was already written before this job was dispatched.
+ * (#213B).
  *
- * Linked-state and per-type preference are re-checked at run time so a
- * user who unlinked (or disabled the type) between enqueue and execution
- * isn't messaged.
+ * Dispatched via {@see Dispatchable::dispatchAfterResponse()}
+ * so it runs in-process right after the response is flushed — no queue
+ * worker required, and it never adds latency to (or fails) the request /
+ * command that created the notification. Delivery is best-effort: a
+ * transport error is reported and swallowed here so it stays non-fatal.
+ *
+ * Linked-state and per-type preference are re-checked at run time in case
+ * the user unlinked (or disabled the type) since the notification row was
+ * written.
  */
-class SendTelegramNotification implements ShouldQueue
+class SendTelegramNotification
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-
-    public int $tries = 3;
+    use Dispatchable, SerializesModels;
 
     public function __construct(public readonly int $notificationId) {}
-
-    /**
-     * @return array<int, int>
-     */
-    public function backoff(): array
-    {
-        return [10, 30, 60];
-    }
 
     public function handle(TelegramService $telegram): void
     {
@@ -53,6 +46,11 @@ class SendTelegramNotification implements ShouldQueue
             return;
         }
 
-        $telegram->send($user->telegram_chat_id, $telegram->formatNotification($notification));
+        try {
+            $telegram->send($user->telegram_chat_id, $telegram->formatNotification($notification));
+        } catch (Throwable $e) {
+            // Non-fatal: the in-app notification already exists. Log and move on.
+            report($e);
+        }
     }
 }

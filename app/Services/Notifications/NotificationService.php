@@ -78,11 +78,12 @@ class NotificationService
         NotificationCreated::dispatch($notification);
 
         // Mirror to Telegram when the recipient has linked a chat and
-        // opted this type in (#213B). Queued + non-fatal: a delivery
-        // failure never blocks the in-app notification above.
+        // opted this type in (#213B). Dispatched after the response so it
+        // needs no queue worker, adds no request latency, and stays
+        // non-fatal to the in-app notification above.
         $recipient = User::find($userId);
         if ($recipient !== null && $recipient->telegramWantsType($type->value)) {
-            SendTelegramNotification::dispatch($notification->id);
+            SendTelegramNotification::dispatchAfterResponse($notification->id);
         }
 
         return $notification;
