@@ -24,15 +24,20 @@ class ExpensePaymentService
      * Record one payment against $expense and advance its `next_due_date`
      * by exactly one billing cycle (left null for one-time expenses).
      *
+     * When $advanceDueDate is false, the payment is recorded identically but
+     * `next_due_date` is left untouched — this back-fills a missed payment
+     * without moving the schedule forward. The flag is meaningful only for
+     * recurring expenses; one-time expenses still null out `next_due_date`.
+     *
      * @return array{0: Expense, 1: ExpensePayment} the refreshed expense and the new payment
      */
-    public function record(Expense $expense, Carbon $paidAt, float $amount, ?string $note, int $createdBy): array
+    public function record(Expense $expense, Carbon $paidAt, float $amount, ?string $note, int $createdBy, bool $advanceDueDate = true): array
     {
         $cycle = $expense->billing_cycle instanceof BillingCycle
             ? $expense->billing_cycle
             : BillingCycle::from((string) $expense->billing_cycle);
 
-        return DB::transaction(function () use ($expense, $cycle, $paidAt, $amount, $note, $createdBy): array {
+        return DB::transaction(function () use ($expense, $cycle, $paidAt, $amount, $note, $createdBy, $advanceDueDate): array {
             $payment = ExpensePayment::create([
                 'expense_id' => $expense->id,
                 'paid_at' => $paidAt->toDateString(),
@@ -46,7 +51,13 @@ class ExpensePaymentService
                 ? Carbon::parse($expense->next_due_date)
                 : null;
 
-            $newDue = $currentDue !== null ? $cycle->advance($currentDue) : null;
+            // one-time always nulls the due date (advance() returns null for
+            // it), so the hold-schedule branch only affects recurring expenses.
+            if (! $advanceDueDate && $cycle !== BillingCycle::OneTime) {
+                $newDue = $currentDue;
+            } else {
+                $newDue = $currentDue !== null ? $cycle->advance($currentDue) : null;
+            }
 
             $expense->next_due_date = $newDue?->toDateString();
             $expense->save();

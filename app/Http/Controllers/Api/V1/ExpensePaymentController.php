@@ -67,6 +67,7 @@ class ExpensePaymentController extends Controller
             $amount,
             $request->input('note'),
             $user->id,
+            $request->boolean('advance_due_date', true),
         );
 
         return response()->json([

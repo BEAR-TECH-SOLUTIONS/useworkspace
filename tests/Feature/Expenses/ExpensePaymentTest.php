@@ -185,6 +185,62 @@ class ExpensePaymentTest extends TestCase
             ->assertJsonPath('expense.next_due_date', '2026-04-20');
     }
 
+    public function test_advance_due_date_false_records_payment_without_moving_schedule(): void
+    {
+        [$owner, $expense] = $this->setupExpense(BillingCycle::Monthly, '2026-04-01');
+
+        $this->actingAs($owner)
+            ->postJson("/api/v1/expenses/{$expense->id}/pay", [
+                'paid_at' => '2026-04-10',
+                'advance_due_date' => false,
+            ])
+            ->assertCreated()
+            // Payment is recorded identically...
+            ->assertJsonPath('payment.amount', number_format((float) $expense->amount, 2, '.', ''))
+            ->assertJsonPath('payment.currency', $expense->currency)
+            // ...but the schedule stays put.
+            ->assertJsonPath('expense.next_due_date', '2026-04-01');
+
+        $this->assertSame(1, ExpensePayment::query()->where('expense_id', $expense->id)->count());
+    }
+
+    public function test_advance_due_date_omitted_advances_as_before(): void
+    {
+        [$owner, $expense] = $this->setupExpense(BillingCycle::Monthly, '2026-04-01');
+
+        $this->actingAs($owner)
+            ->postJson("/api/v1/expenses/{$expense->id}/pay", ['paid_at' => '2026-04-10'])
+            ->assertCreated()
+            ->assertJsonPath('expense.next_due_date', '2026-05-01');
+    }
+
+    public function test_advance_due_date_true_advances(): void
+    {
+        [$owner, $expense] = $this->setupExpense(BillingCycle::Monthly, '2026-04-01');
+
+        $this->actingAs($owner)
+            ->postJson("/api/v1/expenses/{$expense->id}/pay", [
+                'paid_at' => '2026-04-10',
+                'advance_due_date' => true,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('expense.next_due_date', '2026-05-01');
+    }
+
+    public function test_advance_due_date_false_is_noop_for_one_time(): void
+    {
+        // The flag is meaningless for one-time expenses: paying still nulls
+        // next_due_date regardless of advance_due_date.
+        [$owner, $expense] = $this->setupExpense(BillingCycle::OneTime, '2026-04-15');
+
+        $this->actingAs($owner)
+            ->postJson("/api/v1/expenses/{$expense->id}/pay", [
+                'advance_due_date' => false,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('expense.next_due_date', null);
+    }
+
     /**
      * @return array{0: \App\Models\User, 1: Expense}
      */
